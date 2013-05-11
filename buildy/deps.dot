@@ -1,0 +1,10 @@
+strict digraph G {
+substratum;
+"substratum-services";
+miniboot;
+baseimage;
+substratum -> baseimage;
+"substratum-services" -> substratum;
+"substratum-services" -> miniboot;
+miniboot -> baseimage;
+}
