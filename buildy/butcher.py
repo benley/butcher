@@ -1,12 +1,12 @@
 #!/usr/bin/python2.7
 """ HI IT'S VINCE WITH SLAPCHOP """
-#import os
 #os.environ.update({'GIT_PYTHON_TRACE': 'full'})
 
 # This is terrible and incomplete. Don't judge me :-P
 
 
 import json
+import os
 import pprint
 import re
 from twitter.common import log
@@ -14,12 +14,8 @@ from twitter.common import app
 from cloudscaling.buildy import graph
 from cloudscaling.buildy import nodes
 
-app.add_option('--repo_baseurl', dest='repo_baseurl',
-               help='Base URL to git repo colleciton.')
-app.add_option('--repo_basedir', dest='repo_basedir',
-               help='Directory to contain git repository cache')
 app.add_option('--debug', action='store_true', dest='debug')
-
+app.add_option('--pin', action='append', dest='pinned_repos')
 
 
 class ButcherError(RuntimeError):
@@ -27,7 +23,7 @@ class ButcherError(RuntimeError):
   pass
 
 
-def parse_target(targetstr):
+def parse_target(targetstr, current_repo=None):
   """Parse a build target string in the form //repo[gitref]/dir/path:targetname.
 
   These are all valid:
@@ -50,16 +46,19 @@ def parse_target(targetstr):
   """
   match = re.match(
       r'^(?://(?P<repo>[\w-]+)(?:\[(?P<git_ref>.*)\])?)?'
-      r'(?:$|/?(?P<path>[\w/]+)?(?::?(?P<target>\w+)?))', targetstr)
+      r'(?:$|/?(?P<path>[\w/-]+)?(?::?(?P<target>[\w-]+)?))', targetstr)
   try:
     groups = match.groupdict()
+    if not groups['repo']:
+      groups['repo'] = current_repo
     if not groups['git_ref']:
       groups['git_ref'] = 'develop'
     if not groups['target']:
       groups['target'] = 'all'
-    return groups
   except AttributeError:
     raise ButcherError('"%s" is not a valid build target.')
+  log.debug('parse_target: %s -> %s', targetstr, groups)
+  return groups
 
 
 def resolve_target(targetstr, current_repo=None):
@@ -71,7 +70,8 @@ def resolve_target(targetstr, current_repo=None):
     groups['path'] = '/%s' % groups['path']
   if groups['repo'] is None:
     groups['repo'] = current_repo
-  return '//%(repo)s[%(git_ref)s]%(path)s:%(target)s' % groups
+  #return '//%(repo)s[%(git_ref)s]%(path)s:%(target)s' % groups
+  return '//%(repo)s%(path)s:%(target)s' % groups
 
 
 @app.command
@@ -93,20 +93,25 @@ def build(args):
   rtarget = resolve_target(target)
   if rtarget != target:
     log.info('Resolved target to: %s', rtarget)
+
+  pins = {}
+  for pin in app.get_options().pinned_repos:
+    pp = parse_target(pin)
+    pins[pp['repo']] = pp['git_ref']
+
+  print "PINS: %s" % pins
+
   log.info('Building target: %s' % rtarget)
-  params = parse_target(rtarget)
+  params = parse_target(target)
   log.debug('Params: %s', params)
 
   try:
-    repo = nodes.GitRepo(params['repo'])
-    repo.sethead(params['git_ref'])
-    #sha = repo.repo.head.commit
+    repo = nodes.GitRepo(params['repo'], params['git_ref'])
   except nodes.GitError as err:
     log.fatal('Error while fetching //%s:', params['repo'])
     log.fatal(err)
     app.quit(1)
 
-  # This is where I left off:
   if not already_built(repo, params):
     builddata = load_buildfile(repo, params)
     if 'repo' not in builddata:
@@ -117,17 +122,38 @@ def build(args):
 
     (reponame, subgraph, nextrepos) = parse(builddata)
     repos_loaded.add(reponame)
-    repo_queue.union(nextrepos)
+    repo_queue.update(nextrepos)
+    repo_queue.difference_update(repos_loaded)
+
+    while repo_queue:
+      worklist = repo_queue.copy()
+      for n_qrepo in worklist:
+        log.debug("####### %s", n_qrepo)
+        if n_qrepo in pins:
+          n_ref = pins[n_qrepo]
+        else:
+          n_ref = 'develop'
+        n_repo = nodes.GitRepo(n_qrepo, n_ref)
+        n_builddata = load_buildfile(n_repo)
+        (n_reponame, n_subgraph, n_nextrepos) = parse(n_builddata)
+        repos_loaded.add(n_reponame)
+        repo_queue.discard(n_reponame)
+        repo_queue.update(n_nextrepos)
+        repo_queue.difference_update(repos_loaded)
+        import networkx
+        subgraph = networkx.compose(subgraph, n_subgraph)
 
     print('Repos loaded: %s' % repos_loaded)
     print('Repo queue: %s' % repo_queue)
 
-    for node in subgraph.nodes():
-      print "Node: %s\tHash: %s" % (node, hash(node))
+    #for node in subgraph.nodes():
+    #  print "Node: %s\tHash: %s" % (node, hash(node))
+    print('NODES:')
     pprint.pprint(subgraph.nodes())
-    for (a, b) in subgraph.edges():
-      print "a: %s %s" % (a, hash(a))
-      print "b: %s %s" % (b, hash(b))
+    #for (a, b) in subgraph.edges():
+    #  print "a: %s %s" % (a, hash(a))
+    #  print "b: %s %s" % (b, hash(b))
+    print('EDGES:')
     pprint.pprint(subgraph.edges())
 
     # Load dependency graph by recursively parsing BUILD files
@@ -171,11 +197,13 @@ def parse(builddata):
   return (reponame, subgraph, nextrepos)
 
 
-def load_buildfile(repo, params):
-  prefix = params['path'] or ''
-  if prefix and not prefix.endswith('/'):
-    prefix = prefix + '/'
-  filepath = '%sOCS_BUILD.data' % prefix  # FIXME: this filename
+def load_buildfile(repo, params=None):
+  if params:
+    prefix = params['path'] or ''
+  else:
+    prefix = ''
+  filepath = os.path.join(prefix, 'OCS_BUILD.data')
+  log.debug('Repo %s: loading buildfile: %s', repo.name, filepath)
   blob = repo.repo.head.commit.tree/filepath
   data = blob.data_stream.read()
   return json.loads(data)
@@ -190,5 +218,5 @@ def already_built(repo, params):
 
 
 if __name__ == '__main__':
-  app.set_option('twitter_common_log_stderr_log_level', 'google:DEBUG')
+  #app.set_option('twitter_common_log_stderr_log_level', 'google:DEBUG')
   app.main()

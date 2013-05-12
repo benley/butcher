@@ -5,6 +5,12 @@ from twitter.common import app
 from twitter.common import log
 from .generic import GenericNode
 
+app.add_option('--repo_baseurl', dest='repo_baseurl',
+               help='Base URL to git repo colleciton.')
+app.add_option('--repo_basedir', dest='repo_basedir',
+               help='Directory to contain git repository cache')
+
+
 class GitError(RuntimeError):
   """Generic error class."""
   pass
@@ -17,7 +23,8 @@ class GitRepo(GenericNode):
       'repo_basedir': '/var/cache/butcher',
       }
 
-  def __init__(self, reponame):
+  def __init__(self, reponame, ref='develop'):
+    GenericNode.__init__(self, name=reponame)
     opts = app.get_options()
     self.repo_baseurl = opts.repo_baseurl or self.defaults['repo_baseurl']
     log.debug('Base url: %s', self.repo_baseurl)
@@ -46,6 +53,8 @@ class GitRepo(GenericNode):
 
     self.setorigin()
     self.fetchall()
+    if ref:
+      self.sethead(ref)
 
   def setorigin(self):
     """Set the 'origin' remote to the upstream url that we trust."""
@@ -81,5 +90,10 @@ class GitRepo(GenericNode):
       ref = self.fetchref(ref)
     log.debug('Setting head to %s', ref)
     self.repo.head.reset(ref, working_tree=True)
+    log.debug('Head object: %s', self.currenthead)
+
+  @property
+  def currenthead(self):
+    return self.repo.head.object
 
 
