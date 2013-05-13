@@ -21,6 +21,7 @@ python_library(
     sources = 'butcher.py',
     dependencies = [
         pants(':graph'),
+        pants(':gitrepo'),
         pants('src/python/cloudscaling/buildy/nodes'),
         pants('src/python/twitter/common/app'),
         pants('src/python/twitter/common/log'),
@@ -35,5 +36,15 @@ python_library(
         pants('src/python/twitter/common/util'),
         pants('3rdparty/python:matplotlib'),
         pants('3rdparty/python:networkx'),
+        ]
+    )
+
+python_library(
+    name = 'gitrepo',
+    sources = 'gitrepo.py',
+    dependencies = [
+        python_requirement('GitPython'),
+        pants('src/python/twitter/common/app'),
+        pants('src/python/twitter/common/log'),
         ]
     )

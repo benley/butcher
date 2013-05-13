@@ -3,7 +3,6 @@ import gitdb
 import os
 from twitter.common import app
 from twitter.common import log
-from .generic import GenericNode
 
 app.add_option('--repo_baseurl', dest='repo_baseurl',
                help='Base URL to git repo colleciton.')
@@ -16,15 +15,14 @@ class GitError(RuntimeError):
   pass
 
 
-class GitRepo(GenericNode):
-  """Manage git repositories."""
+class GitRepo(object):
+  """Git repository wrapper."""
   defaults = {
       'repo_baseurl': 'ssh://pd.cloudscaling.com:29418',
       'repo_basedir': '/var/cache/butcher',
       }
 
-  def __init__(self, reponame, ref='develop'):
-    GenericNode.__init__(self, name=reponame)
+  def __init__(self, name, ref='develop'):
     opts = app.get_options()
     self.repo_baseurl = opts.repo_baseurl or self.defaults['repo_baseurl']
     log.debug('Base url: %s', self.repo_baseurl)
@@ -32,13 +30,13 @@ class GitRepo(GenericNode):
     self.repo_basedir = opts.repo_basedir or self.defaults['repo_basedir']
     log.debug('Base directory: %s', self.repo_basedir)
 
-    self.reponame = reponame
-    log.debug('Repo name: %s', self.reponame)
+    self.name = name
+    log.debug('Repo name: %s', self.name)
 
-    self.origin_url = '%s/%s' % (self.repo_baseurl, self.reponame)
+    self.origin_url = '%s/%s' % (self.repo_baseurl, self.name)
     log.debug('Trusted origin URL: %s', self.origin_url)
 
-    self.repodir = os.path.join(self.repo_basedir, self.reponame)
+    self.repodir = os.path.join(self.repo_basedir, self.name)
     log.debug('Repo dir: %s', self.repodir)
 
     try:
@@ -69,6 +67,7 @@ class GitRepo(GenericNode):
       log.debug('Created remote "origin" with URL: %s', origin.url)
 
   def fetchall(self):
+    """Fetch all refs from the upstream repo."""
     try:
       self.repo.remotes.origin.fetch()
     except git.exc.GitCommandError as err:
@@ -94,6 +93,7 @@ class GitRepo(GenericNode):
 
   @property
   def currenthead(self):
+    """Returns the current head object."""
     return self.repo.head.object
 
 
