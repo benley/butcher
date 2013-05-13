@@ -1,14 +1,11 @@
 from .deb import Deb
 from .filegroup import FileGroup
 from .generic import GenericNode
-from .gitrepo import GitRepo, GitError
 from .unresolved import UnresolvedDep
 
 __all__ = [
     'Deb',
     'GenericNode',
-    'GitRepo',
-    'GitError',
     'UnresolvedDep',
     'FileGroup',
     ]

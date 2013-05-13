@@ -12,10 +12,24 @@ import re
 from twitter.common import log
 from twitter.common import app
 from cloudscaling.buildy import graph
+from cloudscaling.buildy import gitrepo
 from cloudscaling.buildy import nodes
 
 app.add_option('--debug', action='store_true', dest='debug')
 app.add_option('--pin', action='append', dest='pinned_repos')
+
+
+class ButcherLogSubsystem(app.Module):
+  """This is just here to override logging options at runtime."""
+
+  def __init__(self):
+    app.Module.__init__(self, __name__, description='Butcher logging subsystem',
+                        dependencies='twitter.common.log')
+
+  def setup_function(self):
+    """Runs prior to the main function."""
+    if app.get_options().debug:
+      log.options.LogOptions.set_stderr_log_level('google:DEBUG')
 
 
 class ButcherError(RuntimeError):
@@ -82,10 +96,25 @@ def resolve(args):
     app.quit(1)
   print resolve_target(args[0])
 
+class RepoState(object):
+  """Hold git repo state."""
+  def __init__(self):
+    self.repos = {}
+
+  def GetRepo(self, reponame, ref=None):
+    if reponame not in self.repos:
+      self.repos[reponame] = gitrepo.GitRepo(reponame, ref)
+      return self.repos[reponame]
+
+  def HeadList(self):
+    return [(rname, repo.currenthead) for rname, repo in self.repos.items()]
+
 
 @app.command
 def build(args):
   """Build a target and its dependencies."""
+  rstate = RepoState()
+
   if not args:
     log.error('Argument required.')
     app.quit(1)
@@ -106,8 +135,8 @@ def build(args):
   log.debug('Params: %s', params)
 
   try:
-    repo = nodes.GitRepo(params['repo'], params['git_ref'])
-  except nodes.GitError as err:
+    repo = rstate.GetRepo(params['repo'], params['git_ref'])
+  except gitrepo.GitError as err:
     log.fatal('Error while fetching //%s:', params['repo'])
     log.fatal(err)
     app.quit(1)
@@ -128,12 +157,12 @@ def build(args):
     while repo_queue:
       worklist = repo_queue.copy()
       for n_qrepo in worklist:
-        log.debug("####### %s", n_qrepo)
+        log.info("####### %s", n_qrepo)
         if n_qrepo in pins:
           n_ref = pins[n_qrepo]
         else:
           n_ref = 'develop'
-        n_repo = nodes.GitRepo(n_qrepo, n_ref)
+        n_repo = rstate.GetRepo(n_qrepo, n_ref)
         n_builddata = load_buildfile(n_repo)
         (n_reponame, n_subgraph, n_nextrepos) = parse(n_builddata)
         repos_loaded.add(n_reponame)
@@ -146,15 +175,13 @@ def build(args):
     print('Repos loaded: %s' % repos_loaded)
     print('Repo queue: %s' % repo_queue)
 
-    #for node in subgraph.nodes():
-    #  print "Node: %s\tHash: %s" % (node, hash(node))
-    print('NODES:')
-    pprint.pprint(subgraph.nodes())
-    #for (a, b) in subgraph.edges():
-    #  print "a: %s %s" % (a, hash(a))
-    #  print "b: %s %s" % (b, hash(b))
-    print('EDGES:')
-    pprint.pprint(subgraph.edges())
+    print('REPO STATE:')
+    print rstate.HeadList()
+
+    print('graph:')
+    print subgraph.node
+    print('edges:')
+    print subgraph.edge
 
     # Load dependency graph by recursively parsing BUILD files
     # Decorate nodes with buildcache status
@@ -218,5 +245,5 @@ def already_built(repo, params):
 
 
 if __name__ == '__main__':
-  #app.set_option('twitter_common_log_stderr_log_level', 'google:DEBUG')
+  app.register_module(ButcherLogSubsystem())
   app.main()
