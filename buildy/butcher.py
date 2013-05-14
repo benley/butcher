@@ -1,7 +1,7 @@
 #!/usr/bin/python2.7
 # Copyright 2013 Cloudscaling Inc. All Rights Reserved.
 #
-# This is terrible and incomplete. Don't judge me :-P
+# This is experimental and incomplete. Don't judge me :-P
 
 """Butcher: a distributed build system."""
 
@@ -14,15 +14,18 @@ import json
 import networkx
 import os
 import pprint
-import re
 from twitter.common import log
 from twitter.common import app
+from cloudscaling.buildy import error
 from cloudscaling.buildy import graph
 from cloudscaling.buildy import gitrepo
 from cloudscaling.buildy import nodes
+from cloudscaling.buildy import buildtarget
 
 app.add_option('--debug', action='store_true', dest='debug')
 app.add_option('--pin', action='append', dest='pinned_repos')
+
+BuildTarget = buildtarget.BuildTarget
 
 
 class ButcherLogSubsystem(app.Module):
@@ -38,152 +41,11 @@ class ButcherLogSubsystem(app.Module):
       log.options.LogOptions.set_stderr_log_level('google:DEBUG')
 
 
-class ButcherError(RuntimeError):
-  """Generic error class."""
-  pass
-
-
 class Butcher(object):
   """Butcher."""
 
   def __init__(self):
     self.graph = networkx.DiGraph()
-
-
-class Target(dict):
-  """A build target."""
-
-  # The components that make up a build target:
-  params = ('repo', 'git_ref', 'path', 'target')
-
-  def __init__(self, *args, **kwargs):
-    dict.__init__(self, {'repo': None, 'git_ref': '',
-                         'path': '', 'target': 'all'})
-    self.update(*args, **kwargs)
-
-  def __hash__(self):
-    return hash(self.__repr__())
-
-  def __eq__(self, other):
-    return repr(self) == repr(other)
-
-  def update(self, iterable=None, **kwargs):
-    if iterable:
-      if '__iter__' in type(iterable).__dict__:
-        if 'keys' in type(iterable).__dict__:
-          for k in iterable:
-            self[k] = iterable[k]
-        else:
-          for (k, val) in iterable:
-            self[k] = val
-      else:
-        self.update(self.__parse_target(iterable))
-    for k in kwargs:
-      self[k] = kwargs[k]
-
-  def __setitem__(self, key, value):
-    if key not in ('repo', 'git_ref', 'path', 'target'):
-      raise ButcherError('Invalid parameter: %s' % key)
-    # TODO: value validation
-    dict.__setitem__(self, key, value)
-
-  def __repr__(self):
-    if self.repo is None or self.target is None:
-      raise ButcherError('No valid repr for this incomplete target.')
-
-    ret = ['//%(repo)s' % dict(self)]
-    if self['path']:
-      ret.append('/%s' % self['path'])
-    ret.append(':%(target)s' % self)
-    return ''.join(ret)
-
-  @property
-  def repo(self):
-    return self['repo']
-
-  @property
-  def git_ref(self):
-    return self['git_ref']
-
-  @property
-  def path(self):
-    return self['path']
-
-  @property
-  def target(self):
-    return self['target']
-
-  @staticmethod
-  def __parse_target(targetstr, current_repo=None):
-    """Parse a build target string in the form //repo[gitref]/dir/path:target.
-
-    These are all valid:
-      //repo
-      //repo[a038fi31d9e8bc11582ef1b1b1982d8fc]
-      //repo[a039aa30853298]:foo
-      //repo/dir
-      //repo[a037928734]/dir
-      //repo/dir/path
-      //repo/dir/path:foo
-      :foo
-      dir/path
-      dir/path:foo
-      dir:foo
-
-    Returns: {'repo': '//reponame',
-              'git_ref': 'a839a38fd...',
-              'path': 'dir/path',
-              'target': 'targetname}
-    """
-    match = re.match(
-        r'^(?://(?P<repo>[\w-]+)(?:\[(?P<git_ref>.*)\])?)?'
-        r'(?:$|/?(?P<path>[\w/-]+)?(?::?(?P<target>[\w-]+)?))', targetstr)
-    try:
-      groups = match.groupdict()
-      if not groups['repo']:
-        groups['repo'] = current_repo
-      if not groups['git_ref']:
-        groups['git_ref'] = 'develop'
-      if not groups['target']:
-        groups['target'] = 'all'
-      if not groups['path']:
-        groups['path'] = ''
-    except AttributeError:
-      raise ButcherError('"%s" is not a valid build target.')
-    #log.debug('parse_target: %s -> %s', targetstr, groups)
-    return groups
-
-
-def resolve_target(targetstr, current_repo=None, path=None):
-  """Resolve a targetstr into a "canonical-ish" version."""
-  groups = Target(targetstr)
-
-  if not groups['path']:  # It comes out None if missing.
-    groups['path'] = ''
-  if groups['path']:
-    groups['path'] = '/%s' % groups['path']
-  elif path:
-    if not path.startswith('/'):
-      groups['path'] = '/%s' % path
-    else:
-      groups['path'] = path
-
-  if not groups['repo']:
-    if current_repo:
-      groups['repo'] = current_repo
-    else:
-      raise ButcherError('Can\'t resolve "%s" without the current repo name.')
-  #return '//%(repo)s[%(git_ref)s]%(path)s:%(target)s' % groups
-  return '//%(repo)s%(path)s:%(target)s' % groups
-
-
-@app.command
-def resolve(args):
-  """Just print the result of parsing a target string."""
-  if not args:
-    log.error('Argument required.')
-    app.quit(1)
-  print(Target(args[0]))
 
 
 class RepoState(object):
@@ -201,6 +63,15 @@ class RepoState(object):
 
 
 @app.command
+def resolve(args):
+  """Just print the result of parsing a target string."""
+  if not args:
+    log.error('Exactly 1 argument is required.')
+    app.quit(1)
+  print(BuildTarget(args[0]))
+
+
+@app.command
 def build(args):
   """Build a target and its dependencies."""
 
@@ -208,13 +79,13 @@ def build(args):
     log.error('Target required.')
     app.quit(1)
 
-  target = Target(args[0])
+  target = BuildTarget(args[0])
   log.info('Resolved target to: %s', target)
 
   rstate = RepoState()
   pins = {}
   for pin in app.get_options().pinned_repos:
-    ppin = Target(pin)
+    ppin = BuildTarget(pin)
     pins[ppin.repo] = ppin.git_ref
 
   log.debug('Pinned refs: %s', pins)
@@ -303,13 +174,13 @@ def parse(builddata, reponame, path=None):
   #subgraph.add_node(reponame, {'repo': repo})
   if 'targets' in builddata:
     for tdata in builddata['targets']:
-      target = Target(target=tdata.pop('name'), repo=reponame, path=path)
+      target = BuildTarget(target=tdata.pop('name'), repo=reponame, path=path)
       #t_node = nodes.node(targetname)
       #subgraph.add_node(targetname, obj=t_node)
       subgraph.add_node(target, {'build_data': tdata})
       if 'dependencies' in tdata:
         for dep in tdata['dependencies']:
-          dep_parsed = Target(dep)
+          dep_parsed = BuildTarget(dep)
           if not dep_parsed.repo:
             dep_parsed['repo'] = reponame
           if not dep_parsed.path:
@@ -341,4 +212,5 @@ def already_built(target):
 
 if __name__ == '__main__':
   app.register_module(ButcherLogSubsystem())
+  app.interspersed_args(True)
   app.main()

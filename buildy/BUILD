@@ -18,7 +18,11 @@ python_binary(
 
 python_library(
     name = 'butcher_lib',
-    sources = 'butcher.py',
+    sources = [
+        'butcher.py',
+        'error.py',
+        'buildtarget.py',
+        ],
     dependencies = [
         pants(':graph'),
         pants(':gitrepo'),
