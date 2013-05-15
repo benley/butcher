@@ -20,8 +20,9 @@ python_library(
     name = 'butcher_lib',
     sources = [
         'butcher.py',
-        'error.py',
+        'buildfile.py',
         'buildtarget.py',
+        'error.py',
         ],
     dependencies = [
         pants(':graph'),
