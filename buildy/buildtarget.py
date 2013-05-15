@@ -58,17 +58,33 @@ class BuildTarget(dict):
   def repo(self):
     return self['repo']
 
+  @repo.setter
+  def repo(self, val):
+    self['repo'] = val
+
   @property
   def git_ref(self):
     return self['git_ref']
+
+  @git_ref.setter
+  def git_ref(self, val):
+    self['git_ref'] = val
 
   @property
   def path(self):
     return self['path']
 
+  @path.setter
+  def path(self, val):
+    self['path'] = val
+
   @property
   def target(self):
     return self['target']
+
+  @target.setter
+  def target(self, val):
+    self['target'] = val
 
   @staticmethod
   def __parse_target(targetstr, current_repo=None):
