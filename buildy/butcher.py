@@ -16,15 +16,17 @@ import os
 import pprint
 from twitter.common import log
 from twitter.common import app
+from cloudscaling.buildy import buildfile
+from cloudscaling.buildy import buildtarget
 from cloudscaling.buildy import error
 from cloudscaling.buildy import graph
 from cloudscaling.buildy import gitrepo
 from cloudscaling.buildy import nodes
-from cloudscaling.buildy import buildtarget
 
 app.add_option('--debug', action='store_true', dest='debug')
 app.add_option('--pin', action='append', dest='pinned_repos')
 
+BuildFile = buildfile.BuildFile
 BuildTarget = buildtarget.BuildTarget
 
 
@@ -45,7 +47,72 @@ class Butcher(object):
   """Butcher."""
 
   def __init__(self):
+    # TODO: pins should go in RepoState, don't you think?
+    self.repo_state = RepoState()
+    # TODO:                               vvvvvv ugly vvvvv
+    self.pins = {}
+    pins = app.get_options().pinned_repos
+    for pin in pins:
+      ppin = BuildTarget(pin)
+      self.pins[ppin.repo] = ppin.git_ref
+
+    self.wanted = set()
+    self.loaded = set()
+
     self.graph = networkx.DiGraph()
+    self.subgraphs = {}
+
+  def LoadGraph(self, startingpoint):
+    s_tgt = startingpoint
+    print type(s_tgt)
+    print dict(s_tgt)
+    print s_tgt
+    s_tgt.target = 'all'  # This is being used for repo, ref, path - not target.
+    s_repo = self.repo_state.GetRepo(s_tgt.repo, s_tgt.git_ref)
+    s_data = load_buildfile(s_repo, s_tgt.path)
+    s_subgraph = BuildFile(s_data, s_tgt.repo, s_tgt.path)
+    self.subgraphs[s_tgt] = s_subgraph
+    self.graph = networkx.compose(self.graph, s_subgraph)
+
+    while self.wanted:
+      log.debug('Loaded so far: %s', ','.join(self.subgraphs.keys()))
+      log.debug('Load queue: %s', ','.join(self.loadlist))
+      n_tgt = self.loadlist.pop()
+      if n_tgt.repo in self.pins:
+        n_ref = self.pins[n_tgt.repo]
+      else:
+        n_ref = 'develop'  # TODO: this doesn't belong here.
+      n_repo = self.repo_state.GetRepo(n_tgt.repo, n_ref)
+      n_subgraph = BuildFile(load_buildfile(n_repo, n_tgt.path),
+                             n_tgt.repo, n_tgt.path)
+      self.subgraphs[n_tgt] = n_subgraph
+
+
+  @property
+  def wanted(self):
+    want = set()
+    for node in self.graph.node:
+      if node.THIS DOESNT WORK SO DONT TRY TO USE IT RIGHT NOW
+
+  @property
+  def crossrefs(self):
+    crossrefs = [ x.crossrefs for x in self.subgraphs.values() ]
+    if self.subgraphs:
+      return set.union(*crossrefs)
+
+  @property
+  def loadlist(self):
+    x_paths = [ x.crossref_paths for x in self.subgraphs.values() ]
+    if self.subgraphs:
+      return set.union(*x_paths)
+
+
+@app.command
+def blarg(args):
+  b = Butcher()
+  b.LoadGraph(BuildTarget(args[0]))
+  pprint.pprint(b.graph.node)
+  print "LOADLIST: %s" % b.loadlist
 
 
 class RepoState(object):
@@ -101,11 +168,14 @@ def build(args):
       log.fatal(err)
       app.quit(1)
 
-    builddata = load_buildfile(repo, target.path)
 
-    repos_loaded = set()
-    repo_queue = set()
+    builddata = load_buildfile(repo, target.path)
+    #bf = buildfile.BuildFile(builddata, repo.name, target.path)
+
+    # TODO: use a real queue?
     build_queue = set()
+    repo_queue = set()
+    repos_loaded = set()
 
     (subgraph, nextrepos) = parse(builddata, repo.name, target.path)
     repos_loaded.add(repo.name)

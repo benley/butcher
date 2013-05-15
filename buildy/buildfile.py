@@ -18,6 +18,7 @@ class BuildFile(networkx.DiGraph):
     networkx.DiGraph.__init__(self, name=self.target)
 
     self._parse(data)
+    self.verify()
 
   def _parse(self, builddata):
     """Parse a BUILD file.
@@ -58,6 +59,11 @@ class BuildFile(networkx.DiGraph):
       if node.repo != self.target.repo or node.path != self.target.path:
         crefs.add(node)
     return crefs
+
+  @property
+  def crossref_paths(self):
+    """Just like crossrefs, but all the targets are munged to :all."""
+    return set([BuildTarget(repo=x.repo, path=x.path) for x in self.crossrefs])
 
   def verify(self):
     """Freak out if there are missing local references."""
