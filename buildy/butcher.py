@@ -163,6 +163,7 @@ def parse(builddata, reponame, path=None):
   """Parse a BUILD file.
 
   Args:
+    builddata: dictionary of buildfile data
     reponame: name of the repo that it came from
     path: directory path within the repo
 
@@ -197,10 +198,7 @@ def parse(builddata, reponame, path=None):
 
 def load_buildfile(repo, path=''):
   filepath = os.path.join(path, 'OCS_BUILD.data')
-  log.debug('Repo %s: loading buildfile: /%s', repo.name, filepath)
-  blob = repo.repo.head.commit.tree/filepath
-  data = blob.data_stream.read()
-  return json.loads(data)
+  return json.load(repo.get_file(filepath))
 
 
 def already_built(target):

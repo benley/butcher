@@ -104,4 +104,11 @@ class GitRepo(object):
     """Returns the current head object."""
     return self.repo.head.object
 
+  def get_file(self, filename):
+    """Get a file from the repo.
 
+    Returns a file-like stream with the data.
+    """
+    log.debug('[%s]: reading: /%s', self.name, filename)
+    blob = self.repo.head.commit.tree/filename
+    return blob.data_stream
