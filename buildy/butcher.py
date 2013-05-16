@@ -56,17 +56,27 @@ class Butcher(object):
       ppin = BuildTarget(pin)
       self.pins[ppin.repo] = ppin.git_ref
 
-    self.wanted = set()
     self.loaded = set()
 
     self.graph = networkx.DiGraph()
     self.subgraphs = {}
 
+  def Build(self, target):
+    # TODO: This is where it gets interesting now.
+    # Decorate nodes with buildcache status
+    # Depth first search:
+    #  - find unbuilt leaves with satisfied deps or no deps.
+    #  - enqueue them for build
+    # Continue until the final target is built.
+
+    # Also:
+    # - deal with storing build outputs somewhere
+    # - a way to retrieve prebuilt objects from BCS or equivalent
+    pass
+
   def LoadGraph(self, startingpoint):
     s_tgt = startingpoint
-    print type(s_tgt)
-    print dict(s_tgt)
-    print s_tgt
+    log.debug('Loading graph starting at %s', s_tgt)
     s_tgt.target = 'all'  # This is being used for repo, ref, path - not target.
     s_repo = self.repo_state.GetRepo(s_tgt.repo, s_tgt.git_ref)
     s_data = load_buildfile(s_repo, s_tgt.path)
@@ -74,10 +84,11 @@ class Butcher(object):
     self.subgraphs[s_tgt] = s_subgraph
     self.graph = networkx.compose(self.graph, s_subgraph)
 
-    while self.wanted:
-      log.debug('Loaded so far: %s', ','.join(self.subgraphs.keys()))
-      log.debug('Load queue: %s', ','.join(self.loadlist))
-      n_tgt = self.loadlist.pop()
+    while self.paths_wanted:
+      log.debug('Loaded so far: %s', self.subgraphs.keys())
+      log.debug('Load queue: %s', self.paths_wanted)
+      log.debug('Missing nodes: %s', self.missing_nodes)
+      n_tgt = self.paths_wanted.pop()
       if n_tgt.repo in self.pins:
         n_ref = self.pins[n_tgt.repo]
       else:
@@ -86,33 +97,38 @@ class Butcher(object):
       n_subgraph = BuildFile(load_buildfile(n_repo, n_tgt.path),
                              n_tgt.repo, n_tgt.path)
       self.subgraphs[n_tgt] = n_subgraph
-
-
-  @property
-  def wanted(self):
-    want = set()
-    for node in self.graph.node:
-      if node.THIS DOESNT WORK SO DONT TRY TO USE IT RIGHT NOW
+      # Replace "missing" nodes with actual nodes:
+      for node in self.missing_nodes.intersection(n_subgraph.nodes()):
+        self.graph.node[node].update(n_subgraph.node[node])
+      # Add the new nodes (attributes in self.graph take precedence here):
+      self.graph = networkx.compose(self.graph, n_subgraph)
 
   @property
-  def crossrefs(self):
-    crossrefs = [ x.crossrefs for x in self.subgraphs.values() ]
-    if self.subgraphs:
-      return set.union(*crossrefs)
+  def paths_wanted(self):
+    """The set of paths where we expect to find missing nodes."""
+    return set([ BuildTarget(b, target='all') for b in self.missing_nodes ])
 
   @property
-  def loadlist(self):
-    x_paths = [ x.crossref_paths for x in self.subgraphs.values() ]
-    if self.subgraphs:
-      return set.union(*x_paths)
+  def missing_nodes(self):
+    """The set of build targets known as dependencies but not yet defined."""
+    missing = set()
+    for k, v in self.graph.node.items():
+      if 'build_data' not in v:
+        missing.add(k)
+    return missing
+
+  def load_buildfile(self, repo, path=''):
+    """Pull a json build file from git and return it as a dictionary."""
+    filepath = os.path.join(path, 'OCS_BUILD.data')
+    return json.load(repo.get_file(filepath))
 
 
-@app.command
-def blarg(args):
-  b = Butcher()
-  b.LoadGraph(BuildTarget(args[0]))
-  pprint.pprint(b.graph.node)
-  print "LOADLIST: %s" % b.loadlist
+  def already_built(self, target):
+    """Stub. Always returns False."""
+    # FIXME: implement or obviate.
+    # This may end up in a cache server interface class.
+    _ = target.repo
+    return False
 
 
 class RepoState(object):
@@ -123,7 +139,7 @@ class RepoState(object):
   def GetRepo(self, reponame, ref=None):
     if reponame not in self.repos:
       self.repos[reponame] = gitrepo.GitRepo(reponame, ref)
-      return self.repos[reponame]
+    return self.repos[reponame]
 
   def HeadList(self):
     return [(rname, repo.currenthead) for rname, repo in self.repos.items()]
@@ -149,133 +165,17 @@ def build(args):
   target = BuildTarget(args[0])
   log.info('Resolved target to: %s', target)
 
-  rstate = RepoState()
-  pins = {}
-  for pin in app.get_options().pinned_repos:
-    ppin = BuildTarget(pin)
-    pins[ppin.repo] = ppin.git_ref
+  bb = Butcher()
 
-  log.debug('Pinned refs: %s', pins)
+  log.info('Loading dependency graph...')
+  bb.LoadGraph(target)
 
   log.info('Building target: %s' % target)
+  bb.Build(target)
 
-  if not already_built(target):
-    log.info('####### Loading repo: %s', target.repo)
-    try:
-      repo = rstate.GetRepo(target.repo, target.git_ref)
-    except gitrepo.GitError as err:
-      log.fatal('Error while fetching //%s:', target.repo)
-      log.fatal(err)
-      app.quit(1)
-
-
-    builddata = load_buildfile(repo, target.path)
-    #bf = buildfile.BuildFile(builddata, repo.name, target.path)
-
-    # TODO: use a real queue?
-    build_queue = set()
-    repo_queue = set()
-    repos_loaded = set()
-
-    (subgraph, nextrepos) = parse(builddata, repo.name, target.path)
-    repos_loaded.add(repo.name)
-    repo_queue.update(nextrepos)
-    repo_queue.difference_update(repos_loaded)
-    if target.target == 'all':
-      for tgt in subgraph.nodes():
-        if tgt.repo == repo.name:
-          build_queue.add(tgt)
-
-    while repo_queue:
-      log.debug('Repos loaded: %s', ', '.join(repos_loaded))
-      log.debug('Repo queue: %s', ', '.join(repo_queue))
-      worklist = repo_queue.copy()
-      for n_reponame in worklist:
-        log.info("####### Loading repo: %s", n_reponame)
-        if n_reponame in pins:
-          n_ref = pins[n_reponame]
-        else:
-          n_ref = 'develop'
-        n_repo = rstate.GetRepo(n_reponame, n_ref)
-        n_builddata = load_buildfile(n_repo)
-        (n_subgraph, n_nextrepos) = parse(n_builddata, n_repo.name)
-        repos_loaded.add(n_reponame)
-        repo_queue.discard(n_reponame)
-        repo_queue.update(n_nextrepos)
-        repo_queue.difference_update(repos_loaded)
-        subgraph = networkx.compose(subgraph, n_subgraph)
-
-    log.debug('Repos loaded: %s', ', '.join(repos_loaded))
-    log.debug('Repo queue: %s', ', '.join(repo_queue))
-    log.debug('Build queue: %s', ', '.join([str(x) for x in build_queue]))
-
-    print('REPO STATE:')
-    print rstate.HeadList()
-
-    print('graph:')
-    pprint.pprint(subgraph.node)
-    print('edges:')
-    pprint.pprint(subgraph.edge)
-
-    # Load dependency graph by recursively parsing BUILD files
-    # Decorate nodes with buildcache status
-    # Depth first search:
-    #  - find unbuilt leaves with satisfied deps or no deps.
-    #  - enqueue them for build
-    # Continue until the final target is built.
-
-  # Also:
-  # - deal with storing build outputs somewhere
-  # - a way to retrieve prebuilt objects from BCS or equivalent
-
-
-def parse(builddata, reponame, path=None):
-  """Parse a BUILD file.
-
-  Args:
-    builddata: dictionary of buildfile data
-    reponame: name of the repo that it came from
-    path: directory path within the repo
-
-  Returns:
-    (DiGraph of this BUILD file, list of repos it refers to)
-  """
-  subgraph = networkx.DiGraph()
-  nextrepos = set()
-  #subgraph.add_node(reponame, {'repo': repo})
-  if 'targets' in builddata:
-    for tdata in builddata['targets']:
-      target = BuildTarget(target=tdata.pop('name'), repo=reponame, path=path)
-      #t_node = nodes.node(targetname)
-      #subgraph.add_node(targetname, obj=t_node)
-      subgraph.add_node(target, {'build_data': tdata})
-      if 'dependencies' in tdata:
-        for dep in tdata['dependencies']:
-          dep_parsed = BuildTarget(dep)
-          if not dep_parsed.repo:
-            dep_parsed['repo'] = reponame
-          if not dep_parsed.path:
-            dep_parsed['path'] = path
-          nextrepos.add(dep_parsed.repo)
-          #d_node = nodes.node(dep)
-          if dep_parsed not in subgraph.nodes():
-            #subgraph.add_node(dep, obj=d_node)
-            subgraph.add_node(dep_parsed, {'build_data': {}})
-          subgraph.add_edge(target, dep_parsed)
-      #subgraph.add_edge(reponame, targetname)
-  return (subgraph, nextrepos)
-
-
-def load_buildfile(repo, path=''):
-  filepath = os.path.join(path, 'OCS_BUILD.data')
-  return json.load(repo.get_file(filepath))
-
-
-def already_built(target):
-  """Stub. Always returns False."""
-  # FIXME: implement or obviate.
-  _ = target.repo
-  return False
+  # This is clearly not finished.
+  print bb.graph.node
+  print bb.graph.edge
 
 
 if __name__ == '__main__':

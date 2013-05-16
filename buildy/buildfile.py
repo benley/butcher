@@ -33,7 +33,7 @@ class BuildFile(networkx.DiGraph):
         target = BuildTarget(target=tdata.pop('name'),
                              repo=self.target.repo, path=self.target.path)
         # Duplicate target definition? Uh oh.
-        if target in self.node and self.node[target]['build_data'] is not None:
+        if target in self.node and 'build_data' in self.node[target]:
           raise error.ButcherError(
               'Target is defined more than once: %s', target)
 
@@ -47,7 +47,7 @@ class BuildFile(networkx.DiGraph):
               d_target['repo'] = self.target.repo
               d_target['path'] = self.target.path
             if d_target not in self.nodes():
-              self.add_node(d_target, {'build_data': None})
+              self.add_node(d_target)
             self.add_edge(target, d_target)
 
   @property
@@ -68,7 +68,7 @@ class BuildFile(networkx.DiGraph):
   def verify(self):
     """Freak out if there are missing local references."""
     for node in self.node:
-      if not self.node[node]['build_data'] and node not in self.crossrefs:
+      if 'build_data' not in self.node[node] and node not in self.crossrefs:
         raise error.ButcherError(
             'Missing target: %s referenced from %s but not defined there.',
             node, self.name)

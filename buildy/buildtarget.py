@@ -26,15 +26,15 @@ class BuildTarget(dict):
 
   def update(self, iterable=None, **kwargs):
     if iterable:
-      if '__iter__' in type(iterable).__dict__:
-        if 'keys' in type(iterable).__dict__:
-          for k in iterable:
-            self[k] = iterable[k]
-        else:
+      try:
+        for k in iterable.keys():
+          self[k] = iterable[k]
+      except AttributeError:
+        try:
           for (k, val) in iterable:
             self[k] = val
-      else:
-        self.update(self.__parse_target(iterable))
+        except (TypeError, ValueError):
+          self.update(self.__parse_target(iterable))
     for k in kwargs:
       self[k] = kwargs[k]
 
