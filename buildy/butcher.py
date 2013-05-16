@@ -13,7 +13,6 @@ __author__ = 'Benjamin Staffin <ben@cloudscaling.com>'
 import json
 import networkx
 import os
-import pprint
 from twitter.common import log
 from twitter.common import app
 from cloudscaling.buildy import buildfile
@@ -46,7 +45,7 @@ class ButcherLogSubsystem(app.Module):
 class Butcher(object):
   """Butcher."""
 
-  def __init__(self):
+  def __init__(self, target=None):
     # TODO: pins should go in RepoState, don't you think?
     self.repo_state = RepoState()
     # TODO:                               vvvvvv ugly vvvvv
@@ -56,10 +55,10 @@ class Butcher(object):
       ppin = BuildTarget(pin)
       self.pins[ppin.repo] = ppin.git_ref
 
-    self.loaded = set()
-
     self.graph = networkx.DiGraph()
     self.subgraphs = {}
+    if target:
+      self.LoadGraph(target)
 
   def Build(self, target):
     # TODO: This is where it gets interesting now.
@@ -75,11 +74,11 @@ class Butcher(object):
     pass
 
   def LoadGraph(self, startingpoint):
-    s_tgt = startingpoint
+    s_tgt = BuildTarget(startingpoint)
     log.debug('Loading graph starting at %s', s_tgt)
     s_tgt.target = 'all'  # This is being used for repo, ref, path - not target.
     s_repo = self.repo_state.GetRepo(s_tgt.repo, s_tgt.git_ref)
-    s_data = load_buildfile(s_repo, s_tgt.path)
+    s_data = self.load_buildfile(s_repo, s_tgt.path)
     s_subgraph = BuildFile(s_data, s_tgt.repo, s_tgt.path)
     self.subgraphs[s_tgt] = s_subgraph
     self.graph = networkx.compose(self.graph, s_subgraph)
@@ -94,7 +93,7 @@ class Butcher(object):
       else:
         n_ref = 'develop'  # TODO: this doesn't belong here.
       n_repo = self.repo_state.GetRepo(n_tgt.repo, n_ref)
-      n_subgraph = BuildFile(load_buildfile(n_repo, n_tgt.path),
+      n_subgraph = BuildFile(self.load_buildfile(n_repo, n_tgt.path),
                              n_tgt.repo, n_tgt.path)
       self.subgraphs[n_tgt] = n_subgraph
       # Replace "missing" nodes with actual nodes:
@@ -176,6 +175,17 @@ def build(args):
   # This is clearly not finished.
   print bb.graph.node
   print bb.graph.edge
+
+
+@app.command
+def draw(args):
+  """Load the build graph for a target and render it to an image."""
+  target=args[0]
+  out=args[1]
+
+  bb = Butcher(target)
+  a = networkx.to_agraph(bb.graph)
+  a.draw(out, prog='dot')
 
 
 if __name__ == '__main__':
