@@ -24,6 +24,9 @@ class BuildTarget(dict):
   def __eq__(self, other):
     return repr(self) == repr(other)
 
+  def encode(self, *args, **kwargs):
+    return str(self).encode(*args, **kwargs)
+
   def update(self, iterable=None, **kwargs):
     if iterable:
       try:
