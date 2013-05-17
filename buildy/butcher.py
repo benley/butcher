@@ -51,7 +51,7 @@ class Butcher(object):
     # TODO:                               vvvvvv ugly vvvvv
     self.pins = {}
     pins = app.get_options().pinned_repos
-    for pin in pins:
+    for pin in (pins or []):
       ppin = BuildTarget(pin)
       self.pins[ppin.repo] = ppin.git_ref
 
