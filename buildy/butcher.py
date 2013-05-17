@@ -13,6 +13,7 @@ __author__ = 'Benjamin Staffin <ben@cloudscaling.com>'
 import json
 import networkx
 import os
+import pprint
 from twitter.common import log
 from twitter.common import app
 from cloudscaling.buildy import buildfile
@@ -27,6 +28,7 @@ app.add_option('--pin', action='append', dest='pinned_repos')
 
 BuildFile = buildfile.BuildFile
 BuildTarget = buildtarget.BuildTarget
+RepoState = gitrepo.RepoState
 
 
 class ButcherLogSubsystem(app.Module):
@@ -49,7 +51,6 @@ class Butcher(object):
   def __init__(self, target=None):
     # TODO: pins should go in RepoState, don't you think?
     self.repo_state = RepoState()
-    # TODO:                               vvvvvv ugly vvvvv
     self.pins = {}
     pins = app.get_options().pinned_repos
     for pin in (pins or []):
@@ -87,15 +88,18 @@ class Butcher(object):
     self.graph = networkx.compose(self.graph, s_subgraph)
 
     while self.paths_wanted:
-      log.debug('Loaded so far: %s', self.subgraphs.keys())
-      log.debug('Load queue: %s', self.paths_wanted)
-      log.debug('Missing nodes: %s', self.missing_nodes)
+      log.debug('Loaded so far: %s', self.paths_loaded)
+      log.debug('Unresolved nodes: %s', self.missing_nodes)
       n_tgt = self.paths_wanted.pop()
+      if n_tgt in self.paths_loaded:
+        mlist = ', '.join([ str(x) for x in self.missing_nodes ])
+        raise error.BrokenGraph('Broken graph! Missing targets: %s' % mlist)
+      # TODO: This pinning stuff really doesn't belong here.
       if n_tgt.repo in self.pins:
-        n_ref = self.pins[n_tgt.repo]
+        n_tgt.git_ref = self.pins[n_tgt.repo]
       else:
-        n_ref = 'develop'  # TODO: this doesn't belong here.
-      n_repo = self.repo_state.GetRepo(n_tgt.repo, n_ref)
+        n_tgt.git_ref = 'develop'
+      n_repo = self.repo_state.GetRepo(n_tgt.repo, n_tgt.git_ref)
       n_subgraph = BuildFile(self.load_buildfile(n_repo, n_tgt.path),
                              n_tgt.repo, n_tgt.path)
       self.subgraphs[n_tgt] = n_subgraph
@@ -104,6 +108,11 @@ class Butcher(object):
         self.graph.node[node].update(n_subgraph.node[node])
       # Add the new nodes (attributes in self.graph take precedence here):
       self.graph = networkx.compose(self.graph, n_subgraph)
+
+  @property
+  def paths_loaded(self):
+    """List of paths already visited and loaded."""
+    return self.subgraphs.keys()
 
   @property
   def paths_wanted(self):
@@ -121,6 +130,7 @@ class Butcher(object):
 
   def load_buildfile(self, repo, path=''):
     """Pull a json build file from git and return it as a dictionary."""
+    log.info('Loading: %s', BuildTarget(repo=repo.name, path=path))
     filepath = os.path.join(path, 'OCS_BUILD.data')
     return json.load(repo.get_file(filepath))
 
@@ -131,20 +141,6 @@ class Butcher(object):
     # This may end up in a cache server interface class.
     _ = target.repo
     return False
-
-
-class RepoState(object):
-  """Hold git repo state."""
-  def __init__(self):
-    self.repos = {}
-
-  def GetRepo(self, reponame, ref=None):
-    if reponame not in self.repos:
-      self.repos[reponame] = gitrepo.GitRepo(reponame, ref)
-    return self.repos[reponame]
-
-  def HeadList(self):
-    return [(rname, repo.currenthead) for rname, repo in self.repos.items()]
 
 
 @app.command
@@ -167,12 +163,27 @@ def build(args):
   target = BuildTarget(args[0])
   log.info('Resolved target to: %s', target)
 
-  bb = Butcher()
+  try:
+    bb = Butcher()
+    bb.LoadGraph(target)
+    bb.Build(target)
+  except error.BrokenGraph as lolno:
+    log.fatal(lolno)
+    app.quit(1)
 
-  log.info('Loading dependency graph...')
-  bb.LoadGraph(target)
 
-  bb.Build(target)
+@app.command
+def dump(args):
+  """Load the build graph for a target and dump it to stdout."""
+  try:
+    bb = Butcher(args[0])
+  except error.BrokenGraph as lolno:
+    log.fatal(lolno)
+    app.quit(1)
+  print "Nodes:"
+  pprint.pprint(bb.graph.node)
+  print "Edges:"
+  pprint.pprint(bb.graph.edge)
 
 
 @app.command
@@ -185,7 +196,12 @@ def draw(args):
   target = args[0]
   out = args[1]
 
-  bb = Butcher(target)
+  try:
+    bb = Butcher(target)
+  except error.BrokenGraph as lolno:
+    log.fatal(lolno)
+    app.quit(1)
+
   a = networkx.to_agraph(bb.graph)
   a.draw(out, prog='dot')
   log.info('Graph written to %s', out)

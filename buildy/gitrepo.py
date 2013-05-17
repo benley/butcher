@@ -15,11 +15,45 @@ app.add_option('--repo_baseurl', dest='repo_baseurl',
                help='Base URL to git repo colleciton.')
 app.add_option('--repo_basedir', dest='repo_basedir',
                help='Directory to contain git repository cache')
+app.add_option(
+    '--map_repo', action='append', dest='repo_overrides',
+    help=('Override the upstream location of a repo. '
+          'Format: <reponame>:</path/to/repo>'))
+
+# TODO: validate repo_overrides before starting any real work.
+# TODO: a way to override the working copy location?
 
 
 class GitError(RuntimeError):
   """Generic error class."""
   pass
+
+
+class RepoState(object):
+  """Holds git repo state. Shares state across instances."""
+  __shared_state = {}  # I'm a borg class.
+  repos = {}
+  pins = {}
+  origin_overrides = {}
+
+  def __init__(self):
+    self.__dict__ = self.__shared_state
+    overrides = app.get_options().repo_overrides
+    if overrides:
+      for line in overrides:
+        (reponame, path) = line.split(':')
+        self.origin_overrides[reponame] = path
+
+  def GetRepo(self, reponame, ref=None):
+    if reponame not in self.repos:
+      origin = None
+      if reponame in self.origin_overrides:
+        origin = self.origin_overrides[reponame]
+      self.repos[reponame] = GitRepo(reponame, ref, origin=origin)
+    return self.repos[reponame]
+
+  def HeadList(self):
+    return [(rname, repo.currenthead) for rname, repo in self.repos.items()]
 
 
 class GitRepo(object):
@@ -29,7 +63,7 @@ class GitRepo(object):
       'repo_basedir': '/var/cache/butcher',
       }
 
-  def __init__(self, name, ref='develop'):
+  def __init__(self, name, ref='develop', origin=None):
     opts = app.get_options()
     self.repo_baseurl = opts.repo_baseurl or self.defaults['repo_baseurl']
     #log.debug('Base url: %s', self.repo_baseurl)
@@ -40,11 +74,14 @@ class GitRepo(object):
     self.name = name
     #log.debug('Repo name: %s', self.name)
 
-    self.origin_url = '%s/%s' % (self.repo_baseurl, self.name)
-    log.debug('[%s] Fetching from: %s', self.name, self.origin_url)
+    if origin:
+      self.origin_url = origin
+    else:
+      self.origin_url = '%s/%s' % (self.repo_baseurl, self.name)
+    log.debug('[%s] Origin url: %s', self.name, self.origin_url)
 
     self.repodir = os.path.join(self.repo_basedir, self.name)
-    log.debug('[%s] Repo dir: %s', self.name, self.repodir)
+    log.debug('[%s] Working copy: %s', self.name, self.repodir)
 
     try:
       self.repo = git.Repo(self.repodir)
