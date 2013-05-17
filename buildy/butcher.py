@@ -38,6 +38,7 @@ class ButcherLogSubsystem(app.Module):
 
   def setup_function(self):
     """Runs prior to the main function."""
+    log.options.LogOptions.set_stderr_log_level('google:INFO')
     if app.get_options().debug:
       log.options.LogOptions.set_stderr_log_level('google:DEBUG')
 
@@ -61,6 +62,8 @@ class Butcher(object):
       self.LoadGraph(target)
 
   def Build(self, target):
+    log.info('Building target: %s' % target)
+    log.info('(not yet implemented)')
     # TODO: This is where it gets interesting now.
     # Decorate nodes with buildcache status
     # Depth first search:
@@ -75,7 +78,7 @@ class Butcher(object):
 
   def LoadGraph(self, startingpoint):
     s_tgt = BuildTarget(startingpoint)
-    log.debug('Loading graph starting at %s', s_tgt)
+    log.info('Loading graph starting at %s', s_tgt)
     s_tgt.target = 'all'  # This is being used for repo, ref, path - not target.
     s_repo = self.repo_state.GetRepo(s_tgt.repo, s_tgt.git_ref)
     s_data = self.load_buildfile(s_repo, s_tgt.path)
@@ -169,23 +172,23 @@ def build(args):
   log.info('Loading dependency graph...')
   bb.LoadGraph(target)
 
-  log.info('Building target: %s' % target)
   bb.Build(target)
-
-  # This is clearly not finished.
-  print bb.graph.node
-  print bb.graph.edge
 
 
 @app.command
 def draw(args):
   """Load the build graph for a target and render it to an image."""
-  target=args[0]
-  out=args[1]
+  if len(args) != 2:
+    log.error('Two arguments required: [build target] [output file]')
+    app.quit(1)
+
+  target = args[0]
+  out = args[1]
 
   bb = Butcher(target)
   a = networkx.to_agraph(bb.graph)
   a.draw(out, prog='dot')
+  log.info('Graph written to %s', out)
 
 
 if __name__ == '__main__':
