@@ -6,6 +6,7 @@ We're using OCS_BUILD.data in place of BUILD for now.
 import networkx
 from cloudscaling.buildy import buildtarget
 from cloudscaling.buildy import error
+from twitter.common import log
 
 BuildTarget = buildtarget.BuildTarget
 
@@ -32,22 +33,26 @@ class BuildFile(networkx.DiGraph):
       for tdata in builddata['targets']:
         target = BuildTarget(target=tdata.pop('name'),
                              repo=self.target.repo, path=self.target.path)
+
         # Duplicate target definition? Uh oh.
         if target in self.node and 'build_data' in self.node[target]:
           raise error.ButcherError(
               'Target is defined more than once: %s', target)
 
+        log.debug('New target: %s', target)
         self.add_node(target, {'build_data': tdata})
 
-        if 'dependencies' in tdata:
+        if 'deps' in tdata:
           # dep could be ":blabla" or "//foo:blabla" or "//foo/bar:blabla"
-          for dep in tdata.pop('dependencies'):
+          for dep in tdata.pop('deps'):
             d_target = BuildTarget(dep)
             if not d_target.repo:  # ":blabla"
-              d_target['repo'] = self.target.repo
-              d_target['path'] = self.target.path
+              d_target.repo = self.target.repo
+            if d_target.repo == self.target.repo and not d_target.path:
+              d_target.path = self.target.path
             if d_target not in self.nodes():
               self.add_node(d_target)
+            log.debug('New dep: %s -> %s', target, d_target)
             self.add_edge(target, d_target)
 
   @property
@@ -69,6 +74,6 @@ class BuildFile(networkx.DiGraph):
     """Freak out if there are missing local references."""
     for node in self.node:
       if 'build_data' not in self.node[node] and node not in self.crossrefs:
-        raise error.ButcherError(
-            'Missing target: %s referenced from %s but not defined there.',
-            node, self.name)
+        raise error.BrokenGraph(
+            'Missing target: %s referenced from %s but not defined there.' % (
+            node, self.name))
