@@ -65,7 +65,7 @@ class Butcher(object):
   def Build(self, target):
     log.info('Building target: %s' % target)
     log.info('(not yet implemented)')
-    # TODO: This is where it gets interesting now.
+    # This is where it gets interesting now.
     # Decorate nodes with buildcache status
     # Depth first search:
     #  - find unbuilt leaves with satisfied deps or no deps.
@@ -75,7 +75,17 @@ class Butcher(object):
     # Also:
     # - deal with storing build outputs somewhere
     # - a way to retrieve prebuilt objects from BCS or equivalent
-    pass
+
+    # Get the subgraph of only the things we need built.
+    buildgraph = self.graph.subgraph(
+        networkx.topological_sort(self.graph, nbunch=[target]))
+    if app.get_options().debug:
+      log.debug('Buildgraph edges:')
+      pprint.pprint(buildgraph.node)
+      log.debug('Buildgraph nodes:')
+      pprint.pprint(buildgraph.edges())
+
+    # TODO: this should be parallelized.
 
   def LoadGraph(self, startingpoint):
     s_tgt = BuildTarget(startingpoint)

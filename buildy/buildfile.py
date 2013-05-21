@@ -54,6 +54,12 @@ class BuildFile(networkx.DiGraph):
               self.add_node(d_target)
             log.debug('New dep: %s -> %s', target, d_target)
             self.add_edge(target, d_target)
+    # Add the :all node (unless it's explicitly defined in the build file...)
+    if self.target not in self.node:
+      self.add_node(self.target, {'build_data': {'type': 'virtual'}})
+      for node in self.node:
+        if node.repo == self.target.repo and node != self.target:
+          self.add_edge(self.target, node)
 
   @property
   def crossrefs(self):
