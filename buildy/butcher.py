@@ -26,7 +26,6 @@ from cloudscaling.buildy import nodes
 app.add_option('--debug', action='store_true', dest='debug')
 app.add_option('--pin', action='append', dest='pinned_repos')
 
-BuildFile = buildfile.BuildFile
 BuildTarget = buildtarget.BuildTarget
 RepoState = gitrepo.RepoState
 
@@ -87,13 +86,15 @@ class Butcher(object):
 
     # TODO: this should be parallelized.
 
+    buildroot = builder.BuildRoot()
+
   def LoadGraph(self, startingpoint):
     s_tgt = BuildTarget(startingpoint)
     log.info('Loading graph starting at %s', s_tgt)
     s_tgt.target = 'all'  # This is being used for repo, ref, path - not target.
     s_repo = self.repo_state.GetRepo(s_tgt.repo, s_tgt.git_ref)
-    s_data = self.load_buildfile(s_repo, s_tgt.path)
-    s_subgraph = BuildFile(s_data, s_tgt.repo, s_tgt.path)
+    s_data = self.load_buildfile(s_tgt)
+    s_subgraph = buildfile.load(s_data, s_tgt.repo, s_tgt.path)
     self.subgraphs[s_tgt] = s_subgraph
     self.graph = networkx.compose(self.graph, s_subgraph)
 
@@ -110,8 +111,8 @@ class Butcher(object):
       else:
         n_tgt.git_ref = 'develop'
       n_repo = self.repo_state.GetRepo(n_tgt.repo, n_tgt.git_ref)
-      n_subgraph = BuildFile(self.load_buildfile(n_repo, n_tgt.path),
-                             n_tgt.repo, n_tgt.path)
+      n_subgraph = buildfile.load(self.load_buildfile(n_tgt),
+                                  n_tgt.repo, n_tgt.path)
       self.subgraphs[n_tgt] = n_subgraph
       # Replace "missing" nodes with actual nodes:
       for node in self.missing_nodes.intersection(n_subgraph.nodes()):
@@ -138,11 +139,12 @@ class Butcher(object):
         missing.add(k)
     return missing
 
-  def load_buildfile(self, repo, path=''):
-    """Pull a json build file from git and return it as a dictionary."""
-    log.info('Loading: %s', BuildTarget(repo=repo.name, path=path))
-    filepath = os.path.join(path, 'OCS_BUILD.data')
-    return json.load(repo.get_file(filepath))
+  def load_buildfile(self, buildtarget):
+    """Pull a build file from git."""
+    log.info('Loading: %s', BuildTarget(buildtarget, target='all'))
+    filepath = os.path.join(buildtarget.path, 'OCS_BUILD.data')
+    repo = self.repo_state.GetRepo(buildtarget.repo, buildtarget.git_ref)
+    return repo.get_file(filepath)
 
 
   def already_built(self, target):
