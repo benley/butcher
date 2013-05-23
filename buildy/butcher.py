@@ -59,10 +59,8 @@ class Butcher(object):
     buildgraph = self.graph.subgraph(
         networkx.topological_sort(self.graph, nbunch=[explicit_target]))
     if app.get_options().debug:
-      log.debug('Buildgraph edges:')
-      log.debug(pprint.pformat(buildgraph.edges()))
-      log.debug('Buildgraph nodes:')
-      log.debug(pprint.pformat(buildgraph.node))
+      log.debug('Buildgraph edges:\n%s', pprint.pformat(buildgraph.edges()))
+      log.debug('Buildgraph nodes:\n%s', pprint.pformat(buildgraph.node))
 
     # TODO: this should be parallelized.
 
