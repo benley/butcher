@@ -91,7 +91,7 @@ class GitRepo(object):
     self.name = name
     #log.debug('Repo name: %s', self.name)
 
-    self.ref = ref or opts.default_branch
+    self.ref = ref or opts.default_ref
 
     if origin:
       self.origin_url = origin

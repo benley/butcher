@@ -5,12 +5,13 @@ from cloudscaling.buildy.targets import base
 
 class GenRule(base.BaseTarget):
   """genrule target"""
-  def __init__(self, name, srcs, cmd, outs, deps=None, executable=False):
+
+  def __init__(self, name, cmd, outs, srcs=None, deps=None, executable=False):
     base.BaseTarget.__init__(self, name)
-    self.name = name
-    self.srcs = tuple(srcs)
     self.cmd = cmd
     self.outs = tuple(outs)
+    if srcs:
+      self.srcs = tuple(srcs)
     if deps:
       self.deps = tuple(deps)
     else:

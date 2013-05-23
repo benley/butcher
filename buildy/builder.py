@@ -12,4 +12,10 @@ class BuildRoot(object):
 
   def __init__(self):
     self.buildroot = app.get_options().build_root
-    os.makedirs(self.buildroot)
+    if not os.path.exists(self.buildroot):
+      os.makedirs(self.buildroot)
+    log.info('Build root: %s', self.buildroot)
+
+
+def build(node):
+  log.warn('UNIMPLEMENTED: pretending to build %s', node)

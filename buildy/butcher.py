@@ -10,16 +10,15 @@ __author__ = 'Benjamin Staffin <ben@cloudscaling.com>'
 # If you want this, it has to happen before importing gitrepo:
 #os.environ.update({'GIT_PYTHON_TRACE': 'full'})
 
-import json
 import networkx
 import os
 import pprint
 from twitter.common import log
 from twitter.common import app
+from cloudscaling.buildy import builder
 from cloudscaling.buildy import buildfile
 from cloudscaling.buildy import buildtarget
 from cloudscaling.buildy import error
-from cloudscaling.buildy import graph
 from cloudscaling.buildy import gitrepo
 
 app.add_option('--debug', action='store_true', dest='debug')
@@ -54,32 +53,76 @@ class Butcher(object):
     if target:
       self.LoadGraph(target)
 
-  def Build(self, target):
-    log.info('Building target: %s' % target)
-    log.info('(not yet implemented)')
-    # This is where it gets interesting now.
-    # Decorate nodes with buildcache status
-    # Depth first search:
-    #  - find unbuilt leaves with satisfied deps or no deps.
-    #  - enqueue them for build
-    # Continue until the final target is built.
-
-    # Also:
-    # - deal with storing build outputs somewhere
-    # - a way to retrieve prebuilt objects from BCS or equivalent
-
+  def Build(self, explicit_target):
     # Get the subgraph of only the things we need built.
+    # (yes, topological sort accomplishes that)
     buildgraph = self.graph.subgraph(
-        networkx.topological_sort(self.graph, nbunch=[target]))
+        networkx.topological_sort(self.graph, nbunch=[explicit_target]))
     if app.get_options().debug:
       log.debug('Buildgraph edges:')
-      pprint.pprint(buildgraph.node)
+      log.debug(pprint.pformat(buildgraph.edges()))
       log.debug('Buildgraph nodes:')
-      pprint.pprint(buildgraph.edges())
+      log.debug(pprint.pformat(buildgraph.node))
 
     # TODO: this should be parallelized.
 
+    # Caching notes:
+    # - topological sort:
+    #   - (that is, start at the root of the tree)
+    #   - For each node,
+    #     - IF nothing depends on it (i.e. it has no predecessors)
+    #       AND it is not the explicit build target,
+    #       - Remove it from the build tree (which may create more orphans to
+    #         deal with in a later iteration)
+    #     - ELSEIF it is in the build cache,
+    #       - Mark it as built
+    #       - Remove it from the build tree (which may create orphans to deal
+    #         with in a later iteration)
+    #     - ELSE:
+    #       - Build it!
+    #       - Send its outputs to the build cache
+    #       - If it was the explicit build target, exit the loop.
+    #       - Otherwise, remove it from the build tree and continue
+    # - Next, if the explicit target hasn't already been built at this point,
+    #   - Do a fresh *reverse* topological sort of the build graph, so nodes
+    #     get built before the things that depend upon them.
+    #   - Iterate over that list:
+    #     - Build each node
+    #     - Send it to the build cache
+    #     - Remove it from the build tree
+    # ... and at the end of all that the requested thing has been built.
+
+    # This is probably going to end up iterating over all the nodes twice,
+    # followed by a recursive build process that could technically accomplish
+    # the same thing, but this method will reduce recursion depth. Not sure if
+    # that will ever actually matter.
+
     buildroot = builder.BuildRoot()
+
+    # Iterate from the top of the tree, pruning based on cached/built status.
+    buildlist = networkx.topological_sort(buildgraph)
+    for node in buildlist:
+      if node != explicit_target and not buildgraph.predecessors(node):
+        # It's an orphaned node and we don't need it.
+        buildgraph.remove_node(node)
+        continue
+      if self.already_built(node):
+        # It's already built (or cached)
+        buildgraph.remove_node(node)
+        if node == explicit_target:
+          # The explicitly requested target has already been built. Groovy.
+          buildlist = []
+          break
+
+    # Now that we've pruned the tree, start building from the _bottom_.
+    if buildlist:  # but sure there's actually anything left to do first.
+      buildlist = networkx.topological_sort(buildgraph)
+      buildlist.reverse()
+      for node in buildlist:
+        builder.build(node)
+        buildgraph.remove_node(node)
+
+    log.info('Success! Built %s', explicit_target)
 
   def LoadGraph(self, startingpoint):
     s_tgt = BuildTarget(startingpoint, target='all')

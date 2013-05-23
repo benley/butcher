@@ -19,9 +19,10 @@ python_binary(
 python_library(
     name = 'butcher_lib',
     sources = [
-        'butcher.py',
+        'builder.py',
         'buildfile.py',
         'buildtarget.py',
+        'butcher.py',
         'error.py',
         ],
     dependencies = [

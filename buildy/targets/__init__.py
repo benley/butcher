@@ -2,25 +2,43 @@
 
 from twitter.common import log
 from cloudscaling.buildy import error
-from . import base
-from . import genrule
+from .base import BaseTarget
+from .genrule import GenRule
 
 
+class UnimplementedTarget(BaseTarget):
+  ruletype = 'UNKNOWN'
 
-class DoNothingRule(base.BaseTarget):
   def __init__(self, name, *args, **kwargs):
-    log.warn('Unimplemented rule invoked: name=%s, %s, %s', name, args, kwargs)
+    log.warn('New Unimplemented %s target: name=%s, %s, %s',
+             self.ruletype, name, args, kwargs)
+
+
+class GenDeb(UnimplementedTarget):
+  ruletype = 'gendeb'
+
+
+class PkgFileGroup(UnimplementedTarget):
+  ruletype = 'pkgfilegroup'
+
+
+class VirtualTarget(BaseTarget):
+  def __init__(self, name, deps=None):
+    self.name = name
+    if deps:
+      self.deps = tuple(deps)
+    log.debug('New virtual target: %s, deps: %s', name, deps)
 
 
 TYPE_MAP = {
-    'genrule': genrule.GenRule,
-    'virtual': base.BaseTarget,
-    'gendeb': DoNothingRule,
-    'pkgfilegroup': DoNothingRule,
+    'genrule': GenRule,
+    'virtual': VirtualTarget,
+    'gendeb': GenDeb,
+    'pkgfilegroup': PkgFileGroup,
     }
 
 
-def new(ruletype, *args, **kwargs):
+def new(ruletype, **kwargs):
   try:
     ruleclass = TYPE_MAP[ruletype]
   except KeyError:
@@ -29,6 +47,7 @@ def new(ruletype, *args, **kwargs):
   try:
     return ruleclass(**kwargs)
   except TypeError as err:
+    log.error('BADNESS. ruletype: %s, data: %s', ruletype, kwargs)
     raise
     #raise error.InvalidRule(
     #    '%s does not work that way.\nDetails: %s.\nData: %s' % (
