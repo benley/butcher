@@ -7,7 +7,8 @@ import json
 import networkx
 from cloudscaling.buildy import buildtarget
 from cloudscaling.buildy import error
-from cloudscaling.buildy import gitrepo
+# TODO: maybe use this?
+#from cloudscaling.buildy import gitrepo
 from twitter.common import log
 
 BuildTarget = buildtarget.BuildTarget
@@ -31,8 +32,9 @@ class BuildFile(networkx.DiGraph):
     self._parse(stream)
     self.verify()
 
-  def _parse(self, builddata):
-    raise NotImplementedError
+  def _parse(self, stream):
+    """Parse and load the file's contents into the digraph."""
+    raise NotImplementedError  # Must override in subclass.
 
   def verify(self):
     """Freak out if there are missing local references."""
@@ -45,7 +47,7 @@ class BuildFile(networkx.DiGraph):
   @property
   def crossrefs(self):
     """Returns a set of non-local targets referenced by this build file."""
-    # TODO: memoize this.
+    # TODO: memoize this?
     crefs = set()
     for node in self.node:
       if node.repo != self.target.repo or node.path != self.target.path:
@@ -61,15 +63,7 @@ class BuildFile(networkx.DiGraph):
 class JsonBuildFile(BuildFile):
   """JSON OCS_BUILD.data."""
 
-  def __init__(self, data, reponame, path=''):
-    BuildFile.__init__(self, data, reponame, path)
-
-    datadict = json.load(data)
-    log.debug('This is a JSON build file.')
-    self._parse(datadict)
-    self.verify()
-
-  def _parse(self, builddata):
+  def _parse(self, stream):
     """Parse a JSON BUILD file.
 
     Args:
@@ -77,6 +71,9 @@ class JsonBuildFile(BuildFile):
       reponame: name of the repo that it came from
       path: directory path within the repo
     """
+    builddata = json.load(stream)
+    log.debug('This is a JSON build file.')
+
     if 'targets' in builddata:
       for tdata in builddata['targets']:
         target = BuildTarget(target=tdata.pop('name'),
@@ -104,9 +101,11 @@ class JsonBuildFile(BuildFile):
             self.add_edge(target, d_target)
     # Add the :all node (unless it's explicitly defined in the build file...)
     if self.target not in self.node:
+      log.debug('New target: %s', self.target)
       self.add_node(self.target, {'build_data': {'type': 'virtual'}})
       for node in self.node:
         if node.repo == self.target.repo and node != self.target:
+          log.debug('New dep: %s -> %s', self.target, node)
           self.add_edge(self.target, node)
 
 

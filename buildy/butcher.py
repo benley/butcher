@@ -24,7 +24,6 @@ from cloudscaling.buildy import gitrepo
 from cloudscaling.buildy import nodes
 
 app.add_option('--debug', action='store_true', dest='debug')
-app.add_option('--pin', action='append', dest='pinned_repos')
 
 BuildTarget = buildtarget.BuildTarget
 RepoState = gitrepo.RepoState
@@ -50,11 +49,6 @@ class Butcher(object):
   def __init__(self, target=None):
     # TODO: pins should go in RepoState, don't you think?
     self.repo_state = RepoState()
-    self.pins = {}
-    pins = app.get_options().pinned_repos
-    for pin in (pins or []):
-      ppin = BuildTarget(pin)
-      self.pins[ppin.repo] = ppin.git_ref
 
     self.graph = networkx.DiGraph()
     self.subgraphs = {}
@@ -89,12 +83,10 @@ class Butcher(object):
     buildroot = builder.BuildRoot()
 
   def LoadGraph(self, startingpoint):
-    s_tgt = BuildTarget(startingpoint)
+    s_tgt = BuildTarget(startingpoint, target='all')
     log.info('Loading graph starting at %s', s_tgt)
-    s_tgt.target = 'all'  # This is being used for repo, ref, path - not target.
-    s_repo = self.repo_state.GetRepo(s_tgt.repo, s_tgt.git_ref)
-    s_data = self.load_buildfile(s_tgt)
-    s_subgraph = buildfile.load(s_data, s_tgt.repo, s_tgt.path)
+    s_subgraph = buildfile.load(self.load_buildfile(s_tgt),
+                                s_tgt.repo, s_tgt.path)
     self.subgraphs[s_tgt] = s_subgraph
     self.graph = networkx.compose(self.graph, s_subgraph)
 
@@ -105,12 +97,6 @@ class Butcher(object):
       if n_tgt in self.paths_loaded:
         mlist = ', '.join([ str(x) for x in self.missing_nodes ])
         raise error.BrokenGraph('Broken graph! Missing targets: %s' % mlist)
-      # TODO: This pinning stuff really doesn't belong here.
-      if n_tgt.repo in self.pins:
-        n_tgt.git_ref = self.pins[n_tgt.repo]
-      else:
-        n_tgt.git_ref = 'develop'
-      n_repo = self.repo_state.GetRepo(n_tgt.repo, n_tgt.git_ref)
       n_subgraph = buildfile.load(self.load_buildfile(n_tgt),
                                   n_tgt.repo, n_tgt.path)
       self.subgraphs[n_tgt] = n_subgraph
@@ -139,11 +125,11 @@ class Butcher(object):
         missing.add(k)
     return missing
 
-  def load_buildfile(self, buildtarget):
+  def load_buildfile(self, target):
     """Pull a build file from git."""
-    log.info('Loading: %s', BuildTarget(buildtarget, target='all'))
-    filepath = os.path.join(buildtarget.path, 'OCS_BUILD.data')
-    repo = self.repo_state.GetRepo(buildtarget.repo, buildtarget.git_ref)
+    log.info('Loading: %s', target)
+    filepath = os.path.join(target.path, 'OCS_BUILD.data')
+    repo = self.repo_state.GetRepo(target.repo)
     return repo.get_file(filepath)
 
 
