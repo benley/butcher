@@ -7,6 +7,7 @@ import json
 import networkx
 from cloudscaling.buildy import buildtarget
 from cloudscaling.buildy import error
+from cloudscaling.buildy import targets
 # TODO: maybe use this?
 #from cloudscaling.buildy import gitrepo
 from twitter.common import log
@@ -30,13 +31,13 @@ class BuildFile(networkx.DiGraph):
     networkx.DiGraph.__init__(self, name=self.target)
 
     self._parse(stream)
-    self.verify()
+    self.validate_internal_deps()
 
   def _parse(self, stream):
-    """Parse and load the file's contents into the digraph."""
+    """Parse and load a stream's contents into the digraph."""
     raise NotImplementedError  # Must override in subclass.
 
-  def verify(self):
+  def validate_internal_deps(self):
     """Freak out if there are missing local references."""
     for node in self.node:
       if 'build_data' not in self.node[node] and node not in self.crossrefs:
@@ -59,9 +60,30 @@ class BuildFile(networkx.DiGraph):
     """Just like crossrefs, but all the targets are munged to :all."""
     return set([BuildTarget(repo=x.repo, path=x.path) for x in self.crossrefs])
 
+  @property
+  def local_targets(self):
+    """Iterator over the targets defined in this build file."""
+    for node in self.node:
+      if (node.repo, node.path) == (self.target.repo, self.target.path):
+        yield node
+
 
 class JsonBuildFile(BuildFile):
   """JSON OCS_BUILD.data."""
+
+  def __init__(self, stream, reponame, path=''):
+    BuildFile.__init__(self, stream, reponame, path)
+    self.generate_target_objects()
+
+  def generate_target_objects(self):
+    for node in self.local_targets:
+      if 'target_obj' not in self.node[node]:
+        data = self.node[node]['build_data']
+
+        self.node[node]['target_obj'] = targets.new(
+            name=node,
+            ruletype=data.pop('type'),
+            **self.node[node]['build_data'])
 
   def _parse(self, stream):
     """Parse a JSON BUILD file.

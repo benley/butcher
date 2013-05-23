@@ -21,7 +21,6 @@ from cloudscaling.buildy import buildtarget
 from cloudscaling.buildy import error
 from cloudscaling.buildy import graph
 from cloudscaling.buildy import gitrepo
-from cloudscaling.buildy import nodes
 
 app.add_option('--debug', action='store_true', dest='debug')
 

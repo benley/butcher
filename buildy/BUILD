@@ -27,7 +27,7 @@ python_library(
     dependencies = [
         pants(':graph'),
         pants(':gitrepo'),
-        pants('src/python/cloudscaling/buildy/nodes'),
+        pants('src/python/cloudscaling/buildy/targets'),
         pants('src/python/twitter/common/app'),
         pants('src/python/twitter/common/log'),
         ]
