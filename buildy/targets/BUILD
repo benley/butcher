@@ -3,6 +3,10 @@ python_library(
     sources = [
         '__init__.py',
         'base.py',
+        'gendeb.py',
         'genrule.py',
+        'pkgfilegroup.py',
+        'unimplemented.py',
+        'virtual.py',
         ]
     )

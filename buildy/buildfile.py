@@ -124,7 +124,11 @@ class JsonBuildFile(BuildFile):
     # Add the :all node (unless it's explicitly defined in the build file...)
     if self.target not in self.node:
       log.debug('New target: %s', self.target)
-      self.add_node(self.target, {'build_data': {'type': 'virtual'}})
+      self.add_node(
+          self.target,
+          {'build_data': {'type': 'virtual',
+                          'deps': [x for x in self.local_targets]}})
+
       for node in self.node:
         if node.repo == self.target.repo and node != self.target:
           log.debug('New dep: %s -> %s', self.target, node)

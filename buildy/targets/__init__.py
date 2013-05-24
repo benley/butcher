@@ -1,33 +1,14 @@
 """Target rule types."""
 
 from twitter.common import log
+from cloudscaling.buildy import builder
 from cloudscaling.buildy import error
 from .base import BaseTarget
+from .gendeb import GenDeb
 from .genrule import GenRule
-
-
-class UnimplementedTarget(BaseTarget):
-  ruletype = 'UNKNOWN'
-
-  def __init__(self, name, *args, **kwargs):
-    log.warn('New Unimplemented %s target: name=%s, %s, %s',
-             self.ruletype, name, args, kwargs)
-
-
-class GenDeb(UnimplementedTarget):
-  ruletype = 'gendeb'
-
-
-class PkgFileGroup(UnimplementedTarget):
-  ruletype = 'pkgfilegroup'
-
-
-class VirtualTarget(BaseTarget):
-  def __init__(self, name, deps=None):
-    self.name = name
-    if deps:
-      self.deps = tuple(deps)
-    log.debug('New virtual target: %s, deps: %s', name, deps)
+from .pkgfilegroup import PkgFileGroup
+from .unimplemented import UnimplementedTarget
+from .virtual import VirtualTarget
 
 
 TYPE_MAP = {

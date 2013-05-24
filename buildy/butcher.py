@@ -45,10 +45,9 @@ class Butcher(object):
   """Butcher."""
 
   def __init__(self, target=None):
-    # TODO: pins should go in RepoState, don't you think?
     self.repo_state = RepoState()
-
     self.graph = networkx.DiGraph()
+    # TODO: there isn't really a good reason to keep all the separate subgraphs.
     self.subgraphs = {}
     if target:
       self.LoadGraph(target)
@@ -117,7 +116,13 @@ class Butcher(object):
       buildlist = networkx.topological_sort(buildgraph)
       buildlist.reverse()
       for node in buildlist:
-        builder.build(node)
+        node_obj = buildgraph.node[node]['target_obj']
+        node_builder = node_obj.rulebuilder(
+            buildroot, node_obj,
+            # TODO: this is absurd:
+            self.repo_state.GetRepo(node.repo).repo.tree().abspath)
+        node_builder.prep()
+        node_builder.build()
         buildgraph.remove_node(node)
 
     log.info('Success! Built %s', explicit_target)
