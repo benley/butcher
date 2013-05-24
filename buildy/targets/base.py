@@ -68,4 +68,3 @@ class BaseTarget(object):
       raise error.InvalidRule(
           'While loading %s: Unknown parameter(s): %s' % (
               self.name, ', '.join(kwargs.keys())))
-    print self.params

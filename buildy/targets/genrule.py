@@ -2,7 +2,6 @@
 
 import subprocess
 import sys
-from cloudscaling.buildy import builder
 from cloudscaling.buildy import error
 from cloudscaling.buildy.targets import base
 from twitter.common import log
@@ -14,7 +13,6 @@ class GenRuleBuilder(base.BaseBuilder):
   def __init__(self, buildroot, target_obj, source_dir):
     base.BaseBuilder.__init__(self, buildroot, target_obj, source_dir)
     self.cmd = self.rule.params['cmd']
-    #self.srcs_map = self.rule.params['srcs']
 
   def build(self):
     cmd_prefix = self.gen_srcs_shell_array()
