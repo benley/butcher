@@ -15,17 +15,20 @@ class GenRuleBuilder(base.BaseBuilder):
     self.cmd = self.rule.params['cmd']
 
   def build(self):
-    cmd_prefix = self.gen_srcs_shell_array()
-    shellcmd = cmd_prefix + self.cmd
+    shellcmd = 'BUILDROOT=%s; %s' % (self.buildroot, self.cmd)
     log.debug('RUNNING: %s', shellcmd)
-    subprocess.Popen(shellcmd, stdout=sys.stdout,
-                     stderr=sys.stderr, shell=True, cwd=self.buildroot)
-
+    proc = subprocess.Popen(shellcmd, stdout=sys.stdout,
+                            stderr=sys.stderr, shell=True, cwd=self.buildroot)
+    returncode = proc.wait()
+    if returncode != 0:
+      raise error.BuildFailed('%s failed: cmd returned %s.' %
+                              (self.address, returncode))
 
   def gen_srcs_shell_array(self):
+    """This approach doesn't seem to work."""
     cmd = 'declare -A butcher_location=( '
     cmd += ' '.join(
-        [ "['%s']='%s'" % (src, loc) for (src, loc) in self.srcs_map.items() ])
+        ["['%s']='%s'" % (src, loc) for (src, loc) in self.srcs_map.items()])
     cmd += ' ); '
     return cmd
 
