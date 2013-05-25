@@ -21,8 +21,9 @@ class GenRuleBuilder(base.BaseBuilder):
                             stderr=sys.stderr, shell=True, cwd=self.buildroot)
     returncode = proc.wait()
     if returncode != 0:
-      raise error.BuildFailed('%s failed: cmd returned %s.' %
-                              (self.address, returncode))
+      raise error.TargetBuildFailed(
+          self.rule.name,
+          'cmd returned %s.' % (returncode))
 
   def gen_srcs_shell_array(self):
     """This approach doesn't seem to work."""

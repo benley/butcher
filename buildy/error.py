@@ -16,6 +16,17 @@ class InvalidRule(ButcherError):
   pass
 
 
-class BuildFailed(ButcherError):
+class BuildFailure(ButcherError):
+  """Parent for build faulures."""
+  pass
+
+
+class TargetBuildFailed(BuildFailure):
   """A build failed."""
+  def __init__(self, node, *args):
+    BuildFailure.__init__(self, *args)
+    self.node = node
+
+class OverallBuildFailure(BuildFailure):
+  """The overall build failed, most likely because of individual failures."""
   pass

@@ -49,6 +49,7 @@ class Butcher(object):
     self.graph = networkx.DiGraph()
     # TODO: there isn't really a good reason to keep all the separate subgraphs.
     self.subgraphs = {}
+    self.failure_log = []  # Build failure exceptions get kept in here.
     if target:
       self.LoadGraph(target)
 
@@ -57,9 +58,9 @@ class Butcher(object):
     # (yes, topological sort accomplishes that)
     buildgraph = self.graph.subgraph(
         networkx.topological_sort(self.graph, nbunch=[explicit_target]))
-    if app.get_options().debug:
-      log.debug('Buildgraph edges:\n%s', pprint.pformat(buildgraph.edges()))
-      log.debug('Buildgraph nodes:\n%s', pprint.pformat(buildgraph.node))
+    #if app.get_options().debug:
+    #  log.debug('Buildgraph edges:\n%s', pprint.pformat(buildgraph.edges()))
+    #  log.debug('Buildgraph nodes:\n%s', pprint.pformat(buildgraph.node))
 
     # TODO: this should be parallelized.
 
@@ -116,16 +117,26 @@ class Butcher(object):
       buildlist = networkx.topological_sort(buildgraph)
       buildlist.reverse()
       for node in buildlist:
-        node_obj = buildgraph.node[node]['target_obj']
-        node_builder = node_obj.rulebuilder(
-            buildroot, node_obj,
-            # TODO: this is absurd:
-            self.repo_state.GetRepo(node.repo).repo.tree().abspath)
-        node_builder.prep()
-        node_builder.build()
-        buildgraph.remove_node(node)
+        try:
+          node_obj = buildgraph.node[node]['target_obj']
+          node_builder = node_obj.rulebuilder(
+              buildroot, node_obj,
+              # TODO: this is absurd:
+              self.repo_state.GetRepo(node.repo).repo.tree().abspath)
+          node_builder.prep()
+          node_builder.build()
+        except error.BuildFailure as err:
+          log.error('[%s]: failed: %s', node, err)
+          self.failure_log.append(err)
+          break
+        else:
+          log.debug('[%s]: Build succeeded.', node)
+          buildgraph.remove_node(node)
 
-    log.info('Success! Built %s', explicit_target)
+    if buildlist:  # If the list isn't empty, the build failed.
+      raise error.OverallBuildFailure('Build failed due to previous errors.')
+    else:
+      log.info('Success! Built %s', explicit_target)
 
   def LoadGraph(self, startingpoint):
     s_tgt = BuildTarget(startingpoint, target='all')
@@ -210,9 +221,13 @@ def build(args):
     bb = Butcher()
     bb.LoadGraph(target)
     bb.Build(target)
-  except error.BrokenGraph as lolno:
-    log.fatal(lolno)
+  except error.BrokenGraph as err:
+    log.fatal(err)
     app.quit(1)
+  except error.OverallBuildFailure as err:
+    log.fatal(err)
+    log.fatal('Error list:')
+    [ log.fatal('  [%s]: %s', e.node, e) for e in bb.failure_log ]
 
 
 @app.command
