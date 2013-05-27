@@ -1,7 +1,9 @@
 """genrule target"""
 
+import os
 import subprocess
 import sys
+import stat
 from cloudscaling.buildy import error
 from cloudscaling.buildy.targets import base
 from twitter.common import log
@@ -16,22 +18,22 @@ class GenRuleBuilder(base.BaseBuilder):
 
   def build(self):
     shellcmd = 'BUILDROOT=%s; %s' % (self.buildroot, self.cmd)
-    log.debug('RUNNING: %s', shellcmd)
+    shellcwd = os.path.join(self.buildroot, self.rule.address.path)
+    log.debug('[%s]: Running in a shell:\n   %s', self.rule.name, shellcmd)
     proc = subprocess.Popen(shellcmd, stdout=sys.stdout,
-                            stderr=sys.stderr, shell=True, cwd=self.buildroot)
+                            stderr=sys.stderr, shell=True, cwd=shellcwd)
     returncode = proc.wait()
     if returncode != 0:
       raise error.TargetBuildFailed(
           self.rule.name,
           'cmd returned %s.' % (returncode))
-
-  def gen_srcs_shell_array(self):
-    """This approach doesn't seem to work."""
-    cmd = 'declare -A butcher_location=( '
-    cmd += ' '.join(
-        ["['%s']='%s'" % (src, loc) for (src, loc) in self.srcs_map.items()])
-    cmd += ' ); '
-    return cmd
+    elif self.rule.params['executable']:
+      # GenRule.__init__ already ensured that there is only one output file if
+      # executable=1 is set.
+      built_outfile = os.path.join(self.buildroot, self.rule.address.path,
+                                  self.rule.output_files[0])
+      built_outfile_stat = os.stat(built_outfile)
+      os.chmod(built_outfile, built_outfile_stat.st_mode | stat.S_IEXEC)
 
 
 class GenRule(base.BaseTarget):
@@ -53,3 +55,12 @@ class GenRule(base.BaseTarget):
     if len(self.params['outs']) > 1 and self.params['executable']:
       raise error.InvalidRule(
           'executable=1 is only allowed when there is one output file.')
+
+  @property
+  def output_files(self):
+    """Returns the list of output files from this rule.
+
+    In this case it's simple (for now) - the output files are enumerated in the
+    rule definition.
+    """
+    return self.params['outs']

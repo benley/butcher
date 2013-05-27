@@ -23,6 +23,7 @@ python_library(
         'buildfile.py',
         'buildtarget.py',
         'butcher.py',
+        'cache.py',
         'error.py',
         ],
     dependencies = [
