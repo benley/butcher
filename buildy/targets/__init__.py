@@ -1,7 +1,6 @@
 """Target rule types."""
 
 from twitter.common import log
-from cloudscaling.buildy import builder
 from cloudscaling.buildy import error
 from .base import BaseTarget
 from .gendeb import GenDeb
@@ -20,6 +19,12 @@ TYPE_MAP = {
 
 
 def new(ruletype, **kwargs):
+  """Instantiate a new build rule based on kwargs.
+
+  Appropriate args list varies with rule type.
+  Minimum args required:
+    [... fill this in ...]
+  """
   try:
     ruleclass = TYPE_MAP[ruletype]
   except KeyError:
@@ -27,7 +32,7 @@ def new(ruletype, **kwargs):
 
   try:
     return ruleclass(**kwargs)
-  except TypeError as err:
+  except TypeError:
     log.error('BADNESS. ruletype: %s, data: %s', ruletype, kwargs)
     raise
     #raise error.InvalidRule(

@@ -19,12 +19,12 @@ python_binary(
 python_library(
     name = 'butcher_lib',
     sources = [
-        'builder.py',
         'buildfile.py',
         'buildtarget.py',
         'butcher.py',
         'cache.py',
         'error.py',
+        'util.py',
         ],
     dependencies = [
         pants(':graph'),

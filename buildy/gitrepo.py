@@ -15,9 +15,6 @@ from cloudscaling.buildy import buildtarget
 app.add_option('--repo_baseurl', dest='repo_baseurl',
                help='Base URL to git repo collection.',
                default='ssh://pd.cloudscaling.com:29418')
-app.add_option('--repo_basedir', dest='repo_basedir',
-               help='Directory to contain git repository cache',
-               default='/var/cache/butcher')
 app.add_option(
     '--pin', action='append', dest='pinned_repos',
     help='Pin a repo to a particular symbolic ref. Syntax: //reponame[ref]')
@@ -41,16 +38,16 @@ class GitError(RuntimeError):
   pass
 
 
-class RepoState(object):
-  """Holds git repo state. Shares state across instances."""
-  # TODO: is there any point to borging this instead of using a module function?
-  __shared_state = {}  # I'm a borg class.
+class RepoState(app.Module):
+  """Holds git repo state. Singleton thanks to app.Module."""
   repos = {}
   pins = {}
   origin_overrides = {}
 
   def __init__(self):
-    self.__dict__ = self.__shared_state
+    app.Module.__init__(self, label=__name__, description='Git repo subsystem.')
+
+  def setup_function(self):
     overrides = app.get_options().repo_overrides
     if overrides:
       for line in overrides:
@@ -60,6 +57,7 @@ class RepoState(object):
     for pin in (pins or []):
       ppin = BuildTarget(pin)
       self.pins[ppin.repo] = ppin.git_ref
+
 
   def GetRepo(self, reponame):
     if reponame not in self.repos:
@@ -85,7 +83,7 @@ class GitRepo(object):
     self.repo_baseurl = opts.repo_baseurl
     #log.debug('Base url: %s', self.repo_baseurl)
 
-    self.repo_basedir = opts.repo_basedir
+    self.repo_basedir = os.path.join(opts.butcher_basedir, 'gitrepo')
     #log.debug('Base directory: %s', self.repo_basedir)
 
     self.name = name
@@ -113,9 +111,8 @@ class GitRepo(object):
       raise GitError
 
     self.setorigin()
-    self.fetchall()
-    if ref:
-      self.sethead(ref)
+    self.fetchref(self.ref)
+    self.sethead(self.ref)
 
   def setorigin(self):
     """Set the 'origin' remote to the upstream url that we trust."""

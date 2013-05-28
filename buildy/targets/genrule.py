@@ -19,7 +19,7 @@ class GenRuleBuilder(base.BaseBuilder):
   def build(self):
     shellcmd = 'BUILDROOT=%s; %s' % (self.buildroot, self.cmd)
     shellcwd = os.path.join(self.buildroot, self.rule.address.path)
-    log.debug('[%s]: Running in a shell:\n   %s', self.rule.name, shellcmd)
+    log.debug('[%s]: Running in a shell:\n  %s', self.rule.name, shellcmd)
     proc = subprocess.Popen(shellcmd, stdout=sys.stdout,
                             stderr=sys.stderr, shell=True, cwd=shellcwd)
     returncode = proc.wait()

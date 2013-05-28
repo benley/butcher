@@ -18,3 +18,8 @@ class PkgFileGroup(BaseTarget):
       'section': None,  # one of ('', 'doc', 'config')
       'strip_prefix': None,
       }
+
+  @property
+  def output_files(self):
+    """Returns the list of output files from this rule."""
+    return self.params['srcs']

@@ -1,25 +1,4 @@
-"""Dealing with actually executing builds."""
-
-import os
-from twitter.common import app
-from twitter.common import log
-
-app.add_option('--build_root', dest='build_root',
-               help='Base directory in which builds will be done.',
-               default='/var/lib/butcher/build_root')
-
-# TODO: this is dumb.
-
-def BuildRoot(directory=None):
-  if directory:
-    buildroot = directory
-  else:
-    buildroot = app.get_options().build_root
-  if not os.path.exists(buildroot):
-    os.makedirs(buildroot)
-  log.info('Buildroot: %s', buildroot)
-  return buildroot
-
+# There used to be code here, but it got moved. Now it's just notes.
 
 # Collect sources, put them in place (hardlinks? symlinks? copies? and aufs?)
 # Collect deps, put them in place.

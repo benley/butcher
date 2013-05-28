@@ -27,6 +27,7 @@ class TargetBuildFailed(BuildFailure):
     BuildFailure.__init__(self, *args)
     self.node = node
 
+
 class OverallBuildFailure(BuildFailure):
   """The overall build failed, most likely because of individual failures."""
   pass

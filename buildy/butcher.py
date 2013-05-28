@@ -13,45 +13,64 @@ __author__ = 'Benjamin Staffin <ben@cloudscaling.com>'
 import networkx
 import os
 import pprint
+import shutil
 from twitter.common import log
 from twitter.common import app
-from cloudscaling.buildy import builder
 from cloudscaling.buildy import buildfile
 from cloudscaling.buildy import buildtarget
+from cloudscaling.buildy import cache
 from cloudscaling.buildy import error
 from cloudscaling.buildy import gitrepo
+from cloudscaling.buildy import util
 
 app.add_option('--debug', action='store_true', dest='debug')
+app.add_option('--basedir', dest='butcher_basedir',
+               help='Base directory for butcher to work in.',
+               default=os.path.join(util.user_homedir(), '_butcher.data'))
+app.add_option('--build_root', dest='build_root', help=(
+    'Base directory in which builds will be done. If unspecified, makes a '
+    'build directory inside of the butcher basedir.'))
 
 BuildTarget = buildtarget.BuildTarget
 RepoState = gitrepo.RepoState
 
 
-class ButcherLogSubsystem(app.Module):
-  """This is just here to override logging options at runtime."""
-
-  def __init__(self):
-    app.Module.__init__(self, __name__, description='Butcher logging subsystem',
-                        dependencies='twitter.common.log')
-
-  def setup_function(self):
-    """Runs prior to the main function."""
-    log.options.LogOptions.set_stderr_log_level('google:INFO')
-    if app.get_options().debug:
-      log.options.LogOptions.set_stderr_log_level('google:DEBUG')
-
-
-class Butcher(object):
-  """Butcher."""
+class Butcher(app.Module):
+  """Butcher!"""
 
   def __init__(self, target=None):
+    app.Module.__init__(self, label='butcher',
+                        description='Butcher build system.',
+                        dependencies='twitter.common.log')
     self.repo_state = RepoState()
     self.graph = networkx.DiGraph()
     # TODO: there isn't really a good reason to keep all the separate subgraphs.
     self.subgraphs = {}
     self.failure_log = []  # Build failure exceptions get kept in here.
+    self.buildroot = None
+
     if target:
       self.LoadGraph(target)
+
+  def setup_function(self):
+    """Runs prior to the global main function."""
+    log.options.LogOptions.set_stderr_log_level('google:INFO')
+    if app.get_options().debug:
+      log.options.LogOptions.set_stderr_log_level('google:DEBUG')
+    if not app.get_options().build_root:
+      app.set_option(
+          'build_root', os.path.join(app.get_options().butcher_basedir, 'build'))
+    self.buildroot = app.get_options().build_root
+    if not os.path.exists(self.buildroot):
+      os.makedirs(self.buildroot)
+
+  def Clean(self):
+    """Clear the contents of the build area."""
+    if os.path.exists(self.buildroot):
+      log.info('Clearing the build area.')
+      log.debug('Deleting: %s', self.buildroot)
+      shutil.rmtree(self.buildroot)
+      os.makedirs(self.buildroot)
 
   def Build(self, explicit_target):
     # Get the subgraph of only the things we need built.
@@ -95,8 +114,6 @@ class Butcher(object):
     # the same thing, but this method will reduce recursion depth. Not sure if
     # that will ever actually matter.
 
-    buildroot = builder.BuildRoot()
-
     # Iterate from the top of the tree, pruning based on cached/built status.
     buildlist = networkx.topological_sort(buildgraph)
     for node in buildlist:
@@ -120,7 +137,7 @@ class Butcher(object):
         try:
           node_obj = buildgraph.node[node]['target_obj']
           node_builder = node_obj.rulebuilder(
-              buildroot, node_obj,
+              self.buildroot, node_obj,
               # TODO: this is absurd:
               self.repo_state.GetRepo(node.repo).repo.tree().abspath)
           node_builder.prep()
@@ -189,7 +206,6 @@ class Butcher(object):
     repo = self.repo_state.GetRepo(target.repo)
     return repo.get_file(filepath)
 
-
   def already_built(self, target):
     """Stub. Always returns False."""
     # FIXME: implement or obviate.
@@ -232,6 +248,13 @@ def build(args):
 
 
 @app.command
+def clean(args):
+  """Akin to make clean"""
+  bb = Butcher()
+  bb.Clean()
+
+
+@app.command
 def dump(args):
   """Load the build graph for a target and dump it to stdout."""
   try:
@@ -267,6 +290,8 @@ def draw(args):
 
 
 if __name__ == '__main__':
-  app.register_module(ButcherLogSubsystem())
+  app.register_module(Butcher())
+  app.register_module(gitrepo.RepoState())
+  app.register_module(cache.CacheManager())
   app.interspersed_args(True)
   app.main()

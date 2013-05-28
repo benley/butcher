@@ -8,19 +8,24 @@ from twitter.common import app
 from twitter.common import log
 
 app.add_option('--object_cache_dir', dest='object_cache_dir',
-               default='/tmp/butcher/obj_cache',
                help='Path to local object cache directory.')
 
 
-class CacheManager(object):
+class CacheManager(app.Module):
   """Built object cache manager."""
-  __shared_state = {}  # I'm a borg class.
   cache_dir = None
 
   def __init__(self):
-    self.__dict__ = self.__shared_state  # Share state among instances.
+    app.Module.__init__(self, label='butcher.cachemanager',
+                        description='Butcher cache manager')
+
+  def setup_function(self):
     if not self.cache_dir:
-      self.cache_dir = app.get_options().object_cache_dir
+      opts = app.get_options()
+      if opts.object_cache_dir:
+        self.cache_dir = opts.object_cache_dir
+      else:
+        self.cache_dir = os.path.join(opts.butcher_basedir, 'cache')
       log.info('Cache initialized at %s', self.cache_dir)
     if not os.path.exists(self.cache_dir):
       os.makedirs(self.cache_dir)
