@@ -42,7 +42,7 @@ class CacheManager(app.Module):
                 whatever. (Not yet implemented, nor fully thought out.)
 
     """
-    return os.path.join(self.cache_dir, metahash, rule.address.repo,
+    return os.path.join(self.cache_dir, str(metahash), rule.address.repo,
                         rule.address.path, filename)
 
   def putfile(self, filepath, buildroot, buildrule, metahash):

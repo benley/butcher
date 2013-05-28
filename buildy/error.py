@@ -17,7 +17,7 @@ class InvalidRule(ButcherError):
 
 
 class BuildFailure(ButcherError):
-  """Parent for build faulures."""
+  """Parent for build failures."""
   pass
 
 
@@ -30,4 +30,8 @@ class TargetBuildFailed(BuildFailure):
 
 class OverallBuildFailure(BuildFailure):
   """The overall build failed, most likely because of individual failures."""
+  pass
+
+class NoSuchTargetError(BuildFailure):
+  """That target does not exist."""
   pass

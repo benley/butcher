@@ -5,6 +5,7 @@ import shutil
 from cloudscaling.buildy import buildtarget
 from cloudscaling.buildy import cache
 from cloudscaling.buildy import error
+from cloudscaling.buildy import gitrepo
 from twitter.common import log
 
 
@@ -36,15 +37,22 @@ class BaseBuilder(object):
       self.srcs_map[src] = os.path.join(dstdir, src)
 
   def collect_deps(self):
-    pass
+    log.warn('DEPS COLLECTOR NOT IMPLEMENTED YET')
 
   def collect_outs(self):
-    for outfile in self.rule.output_files:
-      outfile_built = os.path.join(self.buildroot, self.rule.address.path,
+    for outfile in self.rule.output_files or []:
+      outfile_built = os.path.join(self.buildroot, self.address.path,
                                    outfile)
 
+      git_sha = gitrepo.RepoState().GetRepo(self.address.repo).repo.commit()
+      # TODO: git_sha enough is insufficient. More factors to include in hash:
+      # - commit/state of source repo of all dependencies (or all input files?)
+      #   - Actually I like that idea: hash all the input files!
+      # - versions of build tools used (?)
+      metahash = git_sha
       # TODO: record git repo state and buildoptions in cachemgr
-      self.cachemgr.putfile(outfile_built, self.buildroot, self.rule, 'fake')
+      # TODO: move cachemgr to outer controller(?)
+      self.cachemgr.putfile(outfile_built, self.buildroot, self.rule, metahash)
 
   def prep(self):
     self.collect_srcs()
@@ -52,7 +60,7 @@ class BaseBuilder(object):
 
   def build(self):
     """Build the rule. Must be overriden by inheriting class."""
-    raise NotImplementedError
+    raise NotImplementedError(self.rule.address)
 
 
 class BaseTarget(object):

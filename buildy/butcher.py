@@ -73,6 +73,9 @@ class Butcher(app.Module):
       os.makedirs(self.buildroot)
 
   def Build(self, explicit_target):
+    if explicit_target not in self.graph.nodes():
+      raise error.NoSuchTargetError('No rule defined for %s' % explicit_target)
+
     # Get the subgraph of only the things we need built.
     # (yes, topological sort accomplishes that)
     buildgraph = self.graph.subgraph(
@@ -130,9 +133,9 @@ class Butcher(app.Module):
           break
 
     # Now that we've pruned the tree, start building from the _bottom_.
+    buildlist = networkx.topological_sort(buildgraph)
+    buildlist.reverse()
     if buildlist:  # but sure there's actually anything left to do first.
-      buildlist = networkx.topological_sort(buildgraph)
-      buildlist.reverse()
       for node in buildlist:
         try:
           node_obj = buildgraph.node[node]['target_obj']
@@ -151,7 +154,7 @@ class Butcher(app.Module):
           log.debug('[%s]: Build succeeded.', node)
           buildgraph.remove_node(node)
 
-    if buildlist:  # If the list isn't empty, the build failed.
+    if buildgraph.nodes():  # If the list isn't empty, the build failed.
       raise error.OverallBuildFailure('Build failed due to previous errors.')
     else:
       log.info('Success! Built %s', explicit_target)
@@ -203,8 +206,12 @@ class Butcher(app.Module):
     """Pull a build file from git."""
     log.info('Loading: %s', target)
     filepath = os.path.join(target.path, 'OCS_BUILD.data')
-    repo = self.repo_state.GetRepo(target.repo)
-    return repo.get_file(filepath)
+    try:
+      repo = self.repo_state.GetRepo(target.repo)
+      return repo.get_file(filepath)
+    except gitrepo.GitError as err:
+      log.error('Failed loading %s: %s', target, err)
+      raise error.BrokenGraph('Sadface.')
 
   def already_built(self, target):
     """Stub. Always returns False."""
@@ -238,7 +245,9 @@ def build(args):
     bb = Butcher()
     bb.LoadGraph(target)
     bb.Build(target)
-  except error.BrokenGraph as err:
+  except (gitrepo.GitError,
+          error.BrokenGraph,
+          error.NoSuchTargetError) as err:
     log.fatal(err)
     app.quit(1)
   except error.OverallBuildFailure as err:

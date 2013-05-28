@@ -162,5 +162,8 @@ class GitRepo(object):
     Returns a file-like stream with the data.
     """
     log.debug('[%s]: reading: //%s/%s', self.name, self.name, filename)
-    blob = self.repo.head.commit.tree/filename
-    return blob.data_stream
+    try:
+      blob = self.repo.head.commit.tree/filename
+      return blob.data_stream
+    except KeyError as err:
+      raise GitError(err)

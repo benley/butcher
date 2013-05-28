@@ -96,31 +96,34 @@ class JsonBuildFile(BuildFile):
     builddata = json.load(stream)
     log.debug('This is a JSON build file.')
 
-    if 'targets' in builddata:
-      for tdata in builddata['targets']:
-        target = BuildTarget(target=tdata.pop('name'),
-                             repo=self.target.repo, path=self.target.path)
+    if 'targets' not in builddata:
+      log.warn('Warning: No targets defined here.')
+      return
 
-        # Duplicate target definition? Uh oh.
-        if target in self.node and 'build_data' in self.node[target]:
-          raise error.ButcherError(
-              'Target is defined more than once: %s', target)
+    for tdata in builddata['targets']:
+      target = BuildTarget(target=tdata.pop('name'),
+                           repo=self.target.repo, path=self.target.path)
 
-        log.debug('New target: %s', target)
-        self.add_node(target, {'build_data': tdata})
+      # Duplicate target definition? Uh oh.
+      if target in self.node and 'build_data' in self.node[target]:
+        raise error.ButcherError(
+            'Target is defined more than once: %s', target)
 
-        if 'deps' in tdata:
-          # dep could be ":blabla" or "//foo:blabla" or "//foo/bar:blabla"
-          for dep in tdata.pop('deps'):
-            d_target = BuildTarget(dep)
-            if not d_target.repo:  # ":blabla"
-              d_target.repo = self.target.repo
-            if d_target.repo == self.target.repo and not d_target.path:
-              d_target.path = self.target.path
-            if d_target not in self.nodes():
-              self.add_node(d_target)
-            log.debug('New dep: %s -> %s', target, d_target)
-            self.add_edge(target, d_target)
+      log.debug('New target: %s', target)
+      self.add_node(target, {'build_data': tdata})
+
+      if 'deps' in tdata:
+        # dep could be ":blabla" or "//foo:blabla" or "//foo/bar:blabla"
+        for dep in tdata.pop('deps'):
+          d_target = BuildTarget(dep)
+          if not d_target.repo:  # ":blabla"
+            d_target.repo = self.target.repo
+          if d_target.repo == self.target.repo and not d_target.path:
+            d_target.path = self.target.path
+          if d_target not in self.nodes():
+            self.add_node(d_target)
+          log.debug('New dep: %s -> %s', target, d_target)
+          self.add_edge(target, d_target)
     # Add the :all node (unless it's explicitly defined in the build file...)
     if self.target not in self.node:
       log.debug('New target: %s', self.target)
