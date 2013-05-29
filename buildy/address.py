@@ -4,8 +4,8 @@ import re
 from cloudscaling.buildy import error
 
 
-class BuildTarget(dict):
-  """A build target.
+class Address(dict):
+  """A build target address.
 
   Mostly acts like a dictionary, except when you need it to act like a string.
   """

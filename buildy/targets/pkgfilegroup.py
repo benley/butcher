@@ -1,6 +1,6 @@
 """pkgfilegroup targets"""
 
-from cloudscaling.buildy import buildtarget
+from cloudscaling.buildy import address
 from cloudscaling.buildy.targets import base
 from twitter.common import log
 
@@ -35,7 +35,7 @@ class PkgFileGroup(base.BaseTarget):
 
   @property
   def composed_deps(self):
-    return [ buildtarget.BuildTarget(x) for x in self.params['srcs'] ]
+    return [ address.Address(x) for x in self.params['srcs'] ]
 
   @property
   def source_files(self):

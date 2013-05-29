@@ -10,7 +10,7 @@ import gitdb
 import os
 from twitter.common import app
 from twitter.common import log
-from cloudscaling.buildy import buildtarget
+from cloudscaling.buildy import address
 
 app.add_option('--repo_baseurl', dest='repo_baseurl',
                help='Base URL to git repo collection.',
@@ -30,7 +30,7 @@ app.add_option(
 # TODO: a way to override the working copy location?
 #        (in addition to map_repo, which just changes the upstream url)
 
-BuildTarget = buildtarget.BuildTarget
+Address = address.Address
 
 
 class GitError(RuntimeError):
@@ -55,7 +55,7 @@ class RepoState(app.Module):
         self.origin_overrides[reponame] = path
     pins = app.get_options().pinned_repos
     for pin in (pins or []):
-      ppin = BuildTarget(pin)
+      ppin = Address(pin)
       self.pins[ppin.repo] = ppin.git_ref
 
 

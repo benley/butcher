@@ -5,14 +5,14 @@ We're using OCS_BUILD.data in place of BUILD for now.
 
 import json
 import networkx
-from cloudscaling.buildy import buildtarget
+from cloudscaling.buildy import address
 from cloudscaling.buildy import error
 from cloudscaling.buildy import targets
 # TODO: maybe use this?
 #from cloudscaling.buildy import gitrepo
 from twitter.common import log
 
-BuildTarget = buildtarget.BuildTarget
+Address = address.Address
 
 
 def load(stream, reponame, path):
@@ -27,7 +27,7 @@ class BuildFile(networkx.DiGraph):
   """Base class for build file implementations."""
 
   def __init__(self, stream, reponame, path=''):
-    self.target = BuildTarget(repo=reponame, path=path)
+    self.target = Address(repo=reponame, path=path)
     networkx.DiGraph.__init__(self, name=self.target)
 
     self._parse(stream)
@@ -58,7 +58,7 @@ class BuildFile(networkx.DiGraph):
   @property
   def crossref_paths(self):
     """Just like crossrefs, but all the targets are munged to :all."""
-    return set([BuildTarget(repo=x.repo, path=x.path) for x in self.crossrefs])
+    return set([Address(repo=x.repo, path=x.path) for x in self.crossrefs])
 
   @property
   def local_targets(self):
@@ -91,9 +91,9 @@ class JsonBuildFile(BuildFile):
 
     for tdata in builddata['targets']:
       # TODO: validate name
-      target = BuildTarget(target=tdata.pop('name'),
-                           repo=self.target.repo,
-                           path=self.target.path)
+      target = Address(target=tdata.pop('name'),
+                       repo=self.target.repo,
+                       path=self.target.path)
       # Duplicate target definition? Uh oh.
       if target in self.node and 'target_obj' in self.node[target]:
         raise error.ButcherError(
@@ -108,7 +108,7 @@ class JsonBuildFile(BuildFile):
 
       # dep could be ":blabla" or "//foo:blabla" or "//foo/bar:blabla"
       for dep in rule_obj.composed_deps:
-        d_target = BuildTarget(dep)
+        d_target = Address(dep)
         if not d_target.repo:  # ":blabla"
           d_target.repo = self.target.repo
         if d_target.repo == self.target.repo and not d_target.path:

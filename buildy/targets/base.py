@@ -4,7 +4,7 @@ import io
 import networkx
 import os
 import shutil
-from cloudscaling.buildy import buildtarget
+from cloudscaling.buildy import address
 from cloudscaling.buildy import cache
 from cloudscaling.buildy import error
 from cloudscaling.buildy import gitrepo
@@ -102,7 +102,7 @@ class BaseTarget(object):
       **kwargs: Assorted parameters; see subclass implementations for details.
     """
     self.name = kwargs['name']
-    self.address = buildtarget.BuildTarget(self.name)
+    self.address = address.Address(self.name)
     self.subgraph = networkx.DiGraph()
     self.params = {}
 
@@ -138,7 +138,7 @@ class BaseTarget(object):
     """Dependencies of this build target."""
     if 'deps' in self.params:
       param_deps = self.params['deps'] or []
-      return [ buildtarget.BuildTarget(dep) for dep in param_deps ]
+      return [ address.Address(dep) for dep in param_deps ]
     else:
       return None
 
