@@ -40,7 +40,7 @@ class BuildFile(networkx.DiGraph):
   def validate_internal_deps(self):
     """Freak out if there are missing local references."""
     for node in self.node:
-      if 'build_data' not in self.node[node] and node not in self.crossrefs:
+      if 'target_obj' not in self.node[node] and node not in self.crossrefs:
         raise error.BrokenGraph(
             'Missing target: %s referenced from %s but not defined there.' % (
             node, self.name))
@@ -73,17 +73,6 @@ class JsonBuildFile(BuildFile):
 
   def __init__(self, stream, reponame, path=''):
     BuildFile.__init__(self, stream, reponame, path)
-    self.generate_target_objects()
-
-  def generate_target_objects(self):
-    for node in self.local_targets:
-      if 'target_obj' not in self.node[node]:
-        data = self.node[node]['build_data']
-
-        self.node[node]['target_obj'] = targets.new(
-            name=node,
-            ruletype=data.pop('type'),
-            **self.node[node]['build_data'])
 
   def _parse(self, stream):
     """Parse a JSON BUILD file.
@@ -101,36 +90,42 @@ class JsonBuildFile(BuildFile):
       return
 
     for tdata in builddata['targets']:
+      # TODO: validate name
       target = BuildTarget(target=tdata.pop('name'),
-                           repo=self.target.repo, path=self.target.path)
-
+                           repo=self.target.repo,
+                           path=self.target.path)
       # Duplicate target definition? Uh oh.
-      if target in self.node and 'build_data' in self.node[target]:
+      if target in self.node and 'target_obj' in self.node[target]:
         raise error.ButcherError(
             'Target is defined more than once: %s', target)
 
-      log.debug('New target: %s', target)
-      self.add_node(target, {'build_data': tdata})
+      rule_obj = targets.new(name=target,
+                             ruletype=tdata.pop('type'),
+                             **tdata)
 
-      if 'deps' in tdata:
-        # dep could be ":blabla" or "//foo:blabla" or "//foo/bar:blabla"
-        for dep in tdata.pop('deps'):
-          d_target = BuildTarget(dep)
-          if not d_target.repo:  # ":blabla"
-            d_target.repo = self.target.repo
-          if d_target.repo == self.target.repo and not d_target.path:
-            d_target.path = self.target.path
-          if d_target not in self.nodes():
-            self.add_node(d_target)
-          log.debug('New dep: %s -> %s', target, d_target)
-          self.add_edge(target, d_target)
+      log.debug('New target: %s', target)
+      self.add_node(target, {'target_obj': rule_obj})
+
+      # dep could be ":blabla" or "//foo:blabla" or "//foo/bar:blabla"
+      for dep in rule_obj.composed_deps:
+        d_target = BuildTarget(dep)
+        if not d_target.repo:  # ":blabla"
+          d_target.repo = self.target.repo
+        if d_target.repo == self.target.repo and not d_target.path:
+          d_target.path = self.target.path
+        if d_target not in self.nodes():
+          self.add_node(d_target)
+        log.debug('New dep: %s -> %s', target, d_target)
+        self.add_edge(target, d_target)
     # Add the :all node (unless it's explicitly defined in the build file...)
+    #                   (note: please don't do that to yourself)
     if self.target not in self.node:
       log.debug('New target: %s', self.target)
       self.add_node(
           self.target,
-          {'build_data': {'type': 'virtual',
-                          'deps': [x for x in self.local_targets]}})
+          {'target_obj': targets.new(name=self.target,
+                                     ruletype='virtual',
+                                     deps=[x for x in self.local_targets])})
 
       for node in self.node:
         if node.repo == self.target.repo and node != self.target:

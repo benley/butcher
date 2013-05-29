@@ -1,11 +1,14 @@
 """Base target."""
 
+import io
+import networkx
 import os
 import shutil
 from cloudscaling.buildy import buildtarget
 from cloudscaling.buildy import cache
 from cloudscaling.buildy import error
 from cloudscaling.buildy import gitrepo
+from cloudscaling.buildy import util
 from twitter.common import log
 
 
@@ -22,10 +25,10 @@ class BaseBuilder(object):
       os.makedirs(self.buildroot)
     # TODO: some rule types don't have srcs.
     #       Should probably use an intermediate subclass.
-    self.srcs_map = {}  # <-- Nothing appears to use this?
+    self.srcs_map = {}
 
   def collect_srcs(self):
-    for src in self.rule.params['srcs']:
+    for src in self.rule.source_files or []:
       srcpath = os.path.join(self.source_dir, self.address.path, src)
       dstpath = os.path.join(self.buildroot, self.address.path, src)
       dstdir = os.path.dirname(dstpath)
@@ -34,22 +37,42 @@ class BaseBuilder(object):
       if not os.path.exists(dstdir):
         os.makedirs(dstdir)
       shutil.copy2(srcpath, dstdir)
-      self.srcs_map[src] = os.path.join(dstdir, src)
+      self.srcs_map[src] = dstpath
 
   def collect_deps(self):
-    log.warn('DEPS COLLECTOR NOT IMPLEMENTED YET')
+    log.warn('[%s]: DEPS COLLECTOR NOT IMPLEMENTED YET', self.address)
+    if 'deps' not in self.rule.params:
+      return
+    for dep in self.rule.params['deps'] or []:
+      log.debug('Should be collecting %s', dep)
+
+  def _metahash(self):
+    """Checksum hash of all the inputs to this rule.
+
+    Output is invalid until collect_srcs and collect_deps have been run.
+
+    In theory, if this hash doesn't change, the outputs won't change either,
+    which makes it useful for caching.
+    """
+    mhash = util.hash_str(unicode(self.address))
+    for src in self.rule.params['srcs']:
+      mhash = util.hash_file(open(self.srcs_map[src], 'rb'), hasher=mhash)
+    return mhash.hexdigest()
 
   def collect_outs(self):
+    """Collect and store the outputs from this rule."""
+    # TODO: this should probably live in CacheManager.
     for outfile in self.rule.output_files or []:
       outfile_built = os.path.join(self.buildroot, self.address.path,
                                    outfile)
 
-      git_sha = gitrepo.RepoState().GetRepo(self.address.repo).repo.commit()
+      #git_sha = gitrepo.RepoState().GetRepo(self.address.repo).repo.commit()
       # TODO: git_sha enough is insufficient. More factors to include in hash:
       # - commit/state of source repo of all dependencies (or all input files?)
       #   - Actually I like that idea: hash all the input files!
       # - versions of build tools used (?)
-      metahash = git_sha
+      metahash = self._metahash()
+      log.debug('[%s] Metahash: %s', self.address, metahash)
       # TODO: record git repo state and buildoptions in cachemgr
       # TODO: move cachemgr to outer controller(?)
       self.cachemgr.putfile(outfile_built, self.buildroot, self.rule, metahash)
@@ -64,7 +87,7 @@ class BaseBuilder(object):
 
 
 class BaseTarget(object):
-  """Abstract base class for build targets."""
+  """Partially abstract base class for build targets."""
 
   rulebuilder = BaseBuilder
   ruletype = None
@@ -73,9 +96,16 @@ class BaseTarget(object):
   optional_params = {}
 
   def __init__(self, **kwargs):
+    """Initialize the build rule.
+
+    Args:
+      **kwargs: Assorted parameters; see subclass implementations for details.
+    """
     self.name = kwargs['name']
     self.address = buildtarget.BuildTarget(self.name)
+    self.subgraph = networkx.DiGraph()
     self.params = {}
+
     try:
       for param in self.required_params:
         self.params[param] = kwargs.pop(param)
@@ -91,7 +121,7 @@ class BaseTarget(object):
 
     if kwargs:
       raise error.InvalidRule(
-          'While loading %s: Unknown parameter(s): %s' % (
+          '[%s]: Unknown parameter(s): %s' % (
               self.name, ', '.join(kwargs.keys())))
 
   @property
@@ -102,3 +132,18 @@ class BaseTarget(object):
     Paths must be relative to the location of the build rule.
     """
     raise NotImplementedError
+
+  @property
+  def composed_deps(self):
+    """Dependencies of this build target."""
+    if 'deps' in self.params:
+      param_deps = self.params['deps'] or []
+      return [ buildtarget.BuildTarget(dep) for dep in param_deps ]
+    else:
+      return None
+
+  @property
+  def source_files(self):
+    """This rule's source files."""
+    if 'srcs' in self.params:
+      return self.params['srcs']

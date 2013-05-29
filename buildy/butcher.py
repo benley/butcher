@@ -38,7 +38,7 @@ RepoState = gitrepo.RepoState
 class Butcher(app.Module):
   """Butcher!"""
 
-  def __init__(self, target=None):
+  def __init__(self):
     app.Module.__init__(self, label='butcher',
                         description='Butcher build system.',
                         dependencies='twitter.common.log')
@@ -48,9 +48,6 @@ class Butcher(app.Module):
     self.subgraphs = {}
     self.failure_log = []  # Build failure exceptions get kept in here.
     self.buildroot = None
-
-    if target:
-      self.LoadGraph(target)
 
   def setup_function(self):
     """Runs prior to the global main function."""
@@ -183,6 +180,13 @@ class Butcher(app.Module):
       # Add the new nodes (attributes in self.graph take precedence here):
       self.graph = networkx.compose(self.graph, n_subgraph)
 
+    # Traverse the graph and attach subgraphs to each node
+    for node in self.graph.node:
+      node_attrs = self.graph.node[node]
+      subgraph = self.graph.subgraph(
+          networkx.topological_sort(self.graph, nbunch=[node]))
+      node_attrs['target_obj'].subgraph = subgraph
+
   @property
   def paths_loaded(self):
     """List of paths already visited and loaded."""
@@ -197,9 +201,9 @@ class Butcher(app.Module):
   def missing_nodes(self):
     """The set of build targets known as dependencies but not yet defined."""
     missing = set()
-    for k, v in self.graph.node.items():
-      if 'build_data' not in v:
-        missing.add(k)
+    for target_addr, target_attrs in self.graph.node.items():
+      if 'target_obj' not in target_attrs:
+        missing.add(target_addr)
     return missing
 
   def load_buildfile(self, target):
@@ -288,7 +292,8 @@ def draw(args):
   out = args[1]
 
   try:
-    bb = Butcher(target)
+    bb = Butcher()
+    bb.LoadGraph(target)
   except error.BrokenGraph as lolno:
     log.fatal(lolno)
     app.quit(1)

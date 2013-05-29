@@ -8,5 +8,8 @@ python_library(
         'pkgfilegroup.py',
         'unimplemented.py',
         'virtual.py',
-        ]
+        ],
+    dependencies = [
+        pants('3rdparty/python:networkx'),
+        ],
     )
