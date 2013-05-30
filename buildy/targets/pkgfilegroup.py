@@ -11,18 +11,20 @@ Not yet implemented:
   - put output files in the prefixed directory (should this happen here?)
 """
 
-import os.path
 from cloudscaling.buildy import address
 from cloudscaling.buildy.targets import base
-from twitter.common import log
+
 
 class PkgFileGroupBuilder(base.BaseBuilder):
+  """Builder for pkgfilegroup"""
   ruletype = 'pkgfilegroup'
 
   def build(self):
     pass
 
+
 class PkgFileGroup(base.BaseTarget):
+  """pkgfilegroup rule"""
   rulebuilder = PkgFileGroupBuilder
   ruletype = 'pkgfilegroup'
 
@@ -47,7 +49,7 @@ class PkgFileGroup(base.BaseTarget):
 
   @property
   def composed_deps(self):
-    return [ address.Address(x) for x in self.params['srcs'] ]
+    return [ address.new(x) for x in self.params['srcs'] ]
 
   @property
   def source_files(self):

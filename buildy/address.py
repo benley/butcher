@@ -1,11 +1,16 @@
-"""Build target representation."""
+"""Build rule representation."""
 
 import re
 from cloudscaling.buildy import error
 
 
+def new(*args, **kwargs):
+  """Return a new Address object."""
+  return Address(*args, **kwargs)
+
+
 class Address(dict):
-  """A build target address.
+  """A build rule address.
 
   Mostly acts like a dictionary, except when you need it to act like a string.
   """
@@ -28,7 +33,9 @@ class Address(dict):
     return not self.__eq__(other)
 
   def encode(self, *args, **kwargs):
+    """str.encode"""
     return str(self).encode(*args, **kwargs)
+  encode.__doc__ = str.encode.__doc__
 
   def update(self, iterable=None, **kwargs):
     if iterable:

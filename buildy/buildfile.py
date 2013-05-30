@@ -12,8 +12,6 @@ from cloudscaling.buildy import targets
 #from cloudscaling.buildy import gitrepo
 from twitter.common import log
 
-Address = address.Address
-
 
 def load(stream, reponame, path):
   for impl in (JsonBuildFile, PythonBuildFile):
@@ -27,7 +25,7 @@ class BuildFile(networkx.DiGraph):
   """Base class for build file implementations."""
 
   def __init__(self, stream, reponame, path=''):
-    self.target = Address(repo=reponame, path=path)
+    self.target = address.new(repo=reponame, path=path)
     networkx.DiGraph.__init__(self, name=self.target)
 
     self._parse(stream)
@@ -58,7 +56,7 @@ class BuildFile(networkx.DiGraph):
   @property
   def crossref_paths(self):
     """Just like crossrefs, but all the targets are munged to :all."""
-    return set([Address(repo=x.repo, path=x.path) for x in self.crossrefs])
+    return set([address.new(repo=x.repo, path=x.path) for x in self.crossrefs])
 
   @property
   def local_targets(self):
@@ -91,9 +89,9 @@ class JsonBuildFile(BuildFile):
 
     for tdata in builddata['targets']:
       # TODO: validate name
-      target = Address(target=tdata.pop('name'),
-                       repo=self.target.repo,
-                       path=self.target.path)
+      target = address.new(target=tdata.pop('name'),
+                           repo=self.target.repo,
+                           path=self.target.path)
       # Duplicate target definition? Uh oh.
       if target in self.node and 'target_obj' in self.node[target]:
         raise error.ButcherError(
@@ -108,7 +106,7 @@ class JsonBuildFile(BuildFile):
 
       # dep could be ":blabla" or "//foo:blabla" or "//foo/bar:blabla"
       for dep in rule_obj.composed_deps:
-        d_target = Address(dep)
+        d_target = address.new(dep)
         if not d_target.repo:  # ":blabla"
           d_target.repo = self.target.repo
         if d_target.repo == self.target.repo and not d_target.path:

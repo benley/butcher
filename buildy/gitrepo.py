@@ -30,8 +30,6 @@ app.add_option(
 # TODO: a way to override the working copy location?
 #        (in addition to map_repo, which just changes the upstream url)
 
-Address = address.Address
-
 
 class GitError(RuntimeError):
   """Generic error class."""
@@ -55,7 +53,7 @@ class RepoState(app.Module):
         self.origin_overrides[reponame] = path
     pins = app.get_options().pinned_repos
     for pin in (pins or []):
-      ppin = Address(pin)
+      ppin = address.new(pin)
       self.pins[ppin.repo] = ppin.git_ref
 
 

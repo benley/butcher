@@ -102,7 +102,7 @@ class BaseTarget(object):
       **kwargs: Assorted parameters; see subclass implementations for details.
     """
     self.name = kwargs['name']
-    self.address = address.Address(self.name)
+    self.address = address.new(self.name)
     self.subgraph = networkx.DiGraph()
     self.params = {}
 
@@ -138,7 +138,7 @@ class BaseTarget(object):
     """Dependencies of this build target."""
     if 'deps' in self.params:
       param_deps = self.params['deps'] or []
-      return [ address.Address(dep) for dep in param_deps ]
+      return [ address.new(dep) for dep in param_deps ]
     else:
       return None
 

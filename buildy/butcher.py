@@ -31,7 +31,6 @@ app.add_option('--build_root', dest='build_root', help=(
     'Base directory in which builds will be done. If unspecified, makes a '
     'build directory inside of the butcher basedir.'))
 
-Address = address.Address
 RepoState = gitrepo.RepoState
 
 
@@ -157,7 +156,7 @@ class Butcher(app.Module):
       log.info('Success! Built %s', explicit_target)
 
   def LoadGraph(self, startingpoint):
-    s_tgt = Address(startingpoint, target='all')
+    s_tgt = address.new(startingpoint, target='all')
     log.info('Loading graph starting at %s', s_tgt)
     s_subgraph = buildfile.load(self.load_buildfile(s_tgt),
                                 s_tgt.repo, s_tgt.path)
@@ -195,7 +194,7 @@ class Butcher(app.Module):
   @property
   def paths_wanted(self):
     """The set of paths where we expect to find missing nodes."""
-    return set([ Address(b, target='all') for b in self.missing_nodes ])
+    return set([ address.new(b, target='all') for b in self.missing_nodes ])
 
   @property
   def missing_nodes(self):
@@ -231,7 +230,7 @@ def resolve(args):
   if not args:
     log.error('Exactly 1 argument is required.')
     app.quit(1)
-  print(Address(args[0]))
+  print(address.new(args[0]))
 
 
 @app.command
@@ -242,7 +241,7 @@ def build(args):
     log.error('Target required.')
     app.quit(1)
 
-  target = Address(args[0])
+  target = address.new(args[0])
   log.info('Resolved target to: %s', target)
 
   try:

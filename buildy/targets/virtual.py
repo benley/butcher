@@ -6,6 +6,7 @@ from twitter.common import log
 
 
 class VirtualTargetBuilder(base.BaseBuilder):
+  """Builder for virtual (deps only) rules."""
 
   def collect_srcs(self):
     pass
@@ -15,6 +16,7 @@ class VirtualTargetBuilder(base.BaseBuilder):
 
 
 class VirtualTarget(base.BaseTarget):
+  """Virtual (deps only) rule."""
 
   rulebuilder = VirtualTargetBuilder
   ruletype = 'virtual'
