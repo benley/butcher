@@ -114,19 +114,20 @@ class Butcher(app.Module):
     # that will ever actually matter.
 
     # Iterate from the top of the tree, pruning based on cached/built status.
-    buildlist = networkx.topological_sort(buildgraph)
-    for node in buildlist:
-      if node != explicit_target and not buildgraph.predecessors(node):
-        # It's an orphaned node and we don't need it.
-        buildgraph.remove_node(node)
-        continue
-      if self.already_built(node):
-        # It's already built (or cached)
-        buildgraph.remove_node(node)
-        if node == explicit_target:
-          # The explicitly requested target has already been built. Groovy.
-          buildlist = []
-          break
+    #buildlist = networkx.topological_sort(buildgraph)
+    #for node in buildlist:
+    #  if node != explicit_target and not buildgraph.predecessors(node):
+    #    # It's an orphaned node and we don't need it.
+    #    buildgraph.remove_node(node)
+    #    continue
+    #  if self.already_built(node):
+    #    # It's already built (or cached)
+    #    buildgraph.remove_node(node)
+    #    if node == explicit_target:
+    #      # The explicitly requested target has already been built. Groovy.
+    #      node_rule.get_from_cache()
+    #      buildlist = []
+    #      break
 
     # Now that we've pruned the tree, start building from the _bottom_.
     buildlist = networkx.topological_sort(buildgraph)
@@ -140,8 +141,14 @@ class Butcher(app.Module):
               # TODO: this is absurd:
               self.repo_state.GetRepo(node.repo).repo.tree().abspath)
           node_builder.prep()
-          node_builder.build()
-          node_builder.collect_outs()
+          try:
+            node_builder.get_from_cache()
+            log.info('[%s]: cache hit', node)
+          except cache.CacheMiss as err:
+            log.debug('[%s]: cache miss: %s', node, err)
+            log.info('[%s]: Building.', node)
+            node_builder.build()
+            node_builder.collect_outs()
         except error.BuildFailure as err:
           log.error('[%s]: failed: %s', node, err)
           self.failure_log.append(err)
@@ -153,7 +160,7 @@ class Butcher(app.Module):
     if buildgraph.nodes():  # If the list isn't empty, the build failed.
       raise error.OverallBuildFailure('Build failed due to previous errors.')
     else:
-      log.info('Success! Built %s', explicit_target)
+      log.info('Success.', explicit_target)
       log.info('Outputs:')
       for item in self.graph.node[explicit_target]['target_obj'].output_files:
         log.info('  %s', os.path.join(self.buildroot, item))

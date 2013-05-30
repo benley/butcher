@@ -93,23 +93,32 @@ class BaseBuilder(object):
       log.debug('[%s]: Metahash: %s', self.address, metahash)
       # TODO: record git repo state and buildoptions in cachemgr
       # TODO: move cachemgr to outer controller(?)
-      self.cachemgr.putfile(outfile_built, self.buildroot, self.rule, metahash)
+      self.cachemgr.putfile(outfile_built, self.buildroot, metahash)
 
   def prep(self):
     self.collect_srcs()
     self.collect_deps()
 
-  def build(self):
-    """Build the rule. Must be extended by inheriting class."""
+  def is_cached(self):
     try:
       for item in self.rule.output_files:
-        dstpath = os.path.join(self.buildroot, item)
-        self.cachemgr.get_obj(item, self._metahash(), dstpath)
-    except cachemgr.CacheMiss:
-      log.debug('[%s]: Cache miss.', self.address)
+        log.info(item)
+        self.cachemgr.in_cache(item, self._metahash())
+    except cache.CacheMiss:
+      log.info('[%s]: Not cached.', self.address)
+      return False
     else:
-      log.debug('[%s]: Cache hit!', self.address)
-      return
+      log.info('[%s]: found in cache.', self.address)
+      return True
+
+  def get_from_cache(self):
+    """See if this rule has already been built and cached."""
+    for item in self.rule.output_files:
+      dstpath = os.path.join(self.buildroot, item)
+      self.cachemgr.get_obj(item, self._metahash(), dstpath)
+
+  def build(self):
+    """Build the rule. Must be overridden by inheriting class."""
     raise NotImplementedError(self.rule.address)
 
 
@@ -158,7 +167,7 @@ class BaseTarget(object):
     Should be overridden by inheriting class.
     Paths are relative to buildroot.
     """
-    raise NotImplementedError
+    raise NotImplementedError('[%s]: Implementation is broken.' % self.address)
 
   @property
   def composed_deps(self):
