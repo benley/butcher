@@ -7,7 +7,7 @@ import shutil
 from cloudscaling.buildy import address
 from cloudscaling.buildy import cache
 from cloudscaling.buildy import error
-#from cloudscaling.buildy import gitrepo
+from cloudscaling.buildy import gitrepo
 from cloudscaling.buildy import util
 from twitter.common import log
 
@@ -26,6 +26,7 @@ class BaseBuilder(object):
     # TODO: some rule types don't have srcs.
     #       Should probably use an intermediate subclass.
     self.srcs_map = {}
+    self.deps_map = {}
 
   def collect_srcs(self):
     for src in self.rule.source_files or []:
@@ -41,11 +42,26 @@ class BaseBuilder(object):
       self.srcs_map[src] = dstpath
 
   def collect_deps(self):
-    log.warn('[%s]: DEPS COLLECTOR NOT IMPLEMENTED YET', self.address)
-    if 'deps' not in self.rule.params:
-      return
-    for dep in self.rule.params['deps'] or []:
-      log.debug('Should be collecting %s', dep)
+    pass
+    # Holy crap, this whole function is unnecessary with the current design.
+    # A rule's dependencies are built before the rule (duh) and the outputs
+    # thereof go into the same buildroot that this one uses, so the files will
+    # already be in place.
+
+    #if 'deps' not in self.rule.params:
+    #  return
+    #for dep in self.rule.composed_deps or []:
+    #  dep_rule = self.rule.subgraph.node[dep]['target_obj']
+    #  for item in dep_rule.output_files:
+    #   srcpath = os.path.join(self.buildroot, item)
+    #   dstpath = os.path.join(self.buildroot, item)
+    #   dstdir = os.path.dirname(dstpath)
+    #   log.debug('[%s]: Collecting deps: %s -> %s',
+    #             self.address, item, dstpath)
+    #   if not os.path.exists(dstdir):
+    #     os.makedirs(dstdir)
+    #   shutil.copy2(srcpath, dstdir)
+    #   self.deps_map[item] = dstpath
 
   def _metahash(self):
     """Checksum hash of all the inputs to this rule.
@@ -55,10 +71,12 @@ class BaseBuilder(object):
     In theory, if this hash doesn't change, the outputs won't change either,
     which makes it useful for caching.
     """
+    log.debug('[%s]: Metahash input: %s', self.address, unicode(self.address))
     mhash = util.hash_str(unicode(self.address))
     for src in self.rule.source_files or []:
+      log.debug('[%s]: Metahash input: %s', self.address, src)
       mhash = util.hash_file(open(self.srcs_map[src], 'rb'), hasher=mhash)
-    return mhash.hexdigest()
+    return mhash
 
   def collect_outs(self):
     """Collect and store the outputs from this rule."""
@@ -71,8 +89,8 @@ class BaseBuilder(object):
       # - commit/state of source repo of all dependencies (or all input files?)
       #   - Actually I like that idea: hash all the input files!
       # - versions of build tools used (?)
-      metahash = self._metahash()
-      log.debug('[%s] Metahash: %s', self.address, metahash)
+      metahash = self._metahash().hexdigest()
+      log.debug('[%s]: Metahash: %s', self.address, metahash)
       # TODO: record git repo state and buildoptions in cachemgr
       # TODO: move cachemgr to outer controller(?)
       self.cachemgr.putfile(outfile_built, self.buildroot, self.rule, metahash)
@@ -82,7 +100,16 @@ class BaseBuilder(object):
     self.collect_deps()
 
   def build(self):
-    """Build the rule. Must be overriden by inheriting class."""
+    """Build the rule. Must be extended by inheriting class."""
+    try:
+      for item in self.rule.output_files:
+        dstpath = os.path.join(self.buildroot, item)
+        self.cachemgr.get_obj(item, self._metahash(), dstpath)
+    except cachemgr.CacheMiss:
+      log.debug('[%s]: Cache miss.', self.address)
+    else:
+      log.debug('[%s]: Cache hit!', self.address)
+      return
     raise NotImplementedError(self.rule.address)
 
 
@@ -138,7 +165,11 @@ class BaseTarget(object):
     """Dependencies of this build target."""
     if 'deps' in self.params:
       param_deps = self.params['deps'] or []
-      return [ address.new(dep) for dep in param_deps ]
+      deps = [ address.new(dep) for dep in param_deps ]
+      for dep in deps:
+        if dep.repo is None:
+          dep.repo = self.address.repo
+      return deps
     else:
       return None
 

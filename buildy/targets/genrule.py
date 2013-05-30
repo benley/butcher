@@ -36,6 +36,13 @@ class GenRuleBuilder(base.BaseBuilder):
       built_outfile_stat = os.stat(built_outfile)
       os.chmod(built_outfile, built_outfile_stat.st_mode | stat.S_IEXEC)
 
+  def _metahash(self):
+    """Include genrule cmd in the metahash."""
+    mhash = base.BaseBuilder._metahash(self)
+    log.debug('[%s]: Metahash input: cmd="%s"', self.address, self.cmd)
+    mhash.update(self.cmd)
+    return mhash
+
 
 class GenRule(base.BaseTarget):
   """genrule target"""

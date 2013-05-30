@@ -20,6 +20,9 @@ class BuildFailure(ButcherError):
   """Parent for build failures."""
   pass
 
+class AddressError(ButcherError):
+  """Can't parse that or something."""
+  pass
 
 class TargetBuildFailed(BuildFailure):
   """A build failed."""

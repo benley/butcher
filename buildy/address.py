@@ -59,7 +59,8 @@ class Address(dict):
 
   def __repr__(self):
     if self.repo is None or self.target is None:
-      raise error.ButcherError('No valid repr for this incomplete target.')
+      raise error.AddressError(
+          'No valid repr for this incomplete target: %s' % dict(self))
 
     ret = ['//%(repo)s' % dict(self)]
     if self['path']:

@@ -41,6 +41,7 @@ class RepoState(app.Module):
   repos = {}
   pins = {}
   origin_overrides = {}
+  repo_basedir = ''
 
   def __init__(self):
     app.Module.__init__(self, label=__name__, description='Git repo subsystem.')
@@ -55,6 +56,8 @@ class RepoState(app.Module):
     for pin in (pins or []):
       ppin = address.new(pin)
       self.pins[ppin.repo] = ppin.git_ref
+    self.repo_basedir = os.path.join(app.get_options().butcher_basedir,
+                                     'gitrepo')
 
 
   def GetRepo(self, reponame):
@@ -81,7 +84,7 @@ class GitRepo(object):
     self.repo_baseurl = opts.repo_baseurl
     #log.debug('Base url: %s', self.repo_baseurl)
 
-    self.repo_basedir = os.path.join(opts.butcher_basedir, 'gitrepo')
+    self.repo_basedir = RepoState().repo_basedir
     #log.debug('Base directory: %s', self.repo_basedir)
 
     self.name = name
