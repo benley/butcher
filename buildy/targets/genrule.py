@@ -17,11 +17,13 @@ class GenRuleBuilder(base.BaseBuilder):
     self.cmd = self.rule.params['cmd']
 
   def build(self):
-    shellcmd = 'BUILDROOT=%s; %s' % (self.buildroot, self.cmd)
-    shellcwd = os.path.join(self.buildroot, self.rule.address.path)
+    path_to_this_rule = os.path.join(self.buildroot, self.rule.address.repo,
+                                     self.rule.address.path)
+    shellcmd = 'BUILDROOT="%s"; RULEDIR="%s"; %s' % (
+        self.buildroot, path_to_this_rule, self.cmd)
     log.debug('[%s]: Running in a shell:\n  %s', self.rule.name, shellcmd)
-    proc = subprocess.Popen(shellcmd, stdout=sys.stdout,
-                            stderr=sys.stderr, shell=True, cwd=shellcwd)
+    proc = subprocess.Popen(shellcmd, shell=True, cwd=path_to_this_rule,
+                            stdout=sys.stdout, stderr=sys.stderr)
     returncode = proc.wait()
     if returncode != 0:
       raise error.TargetBuildFailed(
@@ -30,8 +32,7 @@ class GenRuleBuilder(base.BaseBuilder):
     elif self.rule.params['executable']:
       # GenRule.__init__ already ensured that there is only one output file if
       # executable=1 is set.
-      built_outfile = os.path.join(self.buildroot, self.rule.address.path,
-                                  self.rule.output_files[0])
+      built_outfile = os.path.join(self.buildroot, self.rule.output_files[0])
       built_outfile_stat = os.stat(built_outfile)
       os.chmod(built_outfile, built_outfile_stat.st_mode | stat.S_IEXEC)
 
@@ -58,9 +59,11 @@ class GenRule(base.BaseTarget):
 
   @property
   def output_files(self):
-    """Returns the list of output files from this rule.
+    """Returns the list of output files from this rule, relative to buildroot.
 
     In this case it's simple (for now) - the output files are enumerated in the
     rule definition.
     """
-    return self.params['outs']
+    outs = [os.path.join(self.address.repo, self.address.path, x)
+            for x in self.params['outs']]
+    return outs

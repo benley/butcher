@@ -36,25 +36,24 @@ class CacheManager(app.Module):
     The generated path does not imply the file's existence!
 
     Args:
-      filename: Filename relative to the path of the rule that generated it.
+      filename: Filename relative to buildroot
       rule: A targets.SomeBuildRule object
       metahash: Hashed combination of source ingredients and flags and
                 whatever. (Not yet implemented, nor fully thought out.)
 
     """
-    return os.path.join(self.cache_dir, str(metahash), rule.address.repo,
-                        rule.address.path, filename)
+    return os.path.join(self.cache_dir, str(metahash), filename)
 
   def putfile(self, filepath, buildroot, buildrule, metahash):
     """Put a file in the cache.
 
     Args:
       filepath: Path to file on disk.
-      buildroot: Path to buildroot (i.e. filepath prefix to strip)
+      buildroot: Path to buildroot
       buildrule: The rule that generated this file.
       metahash: unique metahash (blahblah?)
     """
-    filepath_relative = filepath.split(buildroot)[1][1:]
+    filepath_relative = filepath.split(buildroot)[1][1:]  # (Strip leading /)
     incachepath = self.path_in_cache(filepath_relative, buildrule, metahash)
     log.debug('Cache: %s -> %s', filepath, incachepath)
     if not os.path.exists(os.path.dirname(incachepath)):

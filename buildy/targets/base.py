@@ -7,7 +7,7 @@ import shutil
 from cloudscaling.buildy import address
 from cloudscaling.buildy import cache
 from cloudscaling.buildy import error
-from cloudscaling.buildy import gitrepo
+#from cloudscaling.buildy import gitrepo
 from cloudscaling.buildy import util
 from twitter.common import log
 
@@ -19,7 +19,7 @@ class BaseBuilder(object):
     self.source_dir = source_dir    # Where the git repo is checked out
     self.rule = target_obj          # targets.something object
     self.address = target_obj.name  # Build address
-    self.buildroot = os.path.join(buildroot, self.address.repo)
+    self.buildroot = buildroot
     self.cachemgr = cache.CacheManager()
     if not os.path.exists(self.buildroot):
       os.makedirs(self.buildroot)
@@ -30,7 +30,8 @@ class BaseBuilder(object):
   def collect_srcs(self):
     for src in self.rule.source_files or []:
       srcpath = os.path.join(self.source_dir, self.address.path, src)
-      dstpath = os.path.join(self.buildroot, self.address.path, src)
+      dstpath = os.path.join(self.buildroot, self.address.repo,
+                             self.address.path, src)
       dstdir = os.path.dirname(dstpath)
       log.debug('[%s]: Collect srcs: %s -> %s', self.rule.address, srcpath,
                 dstpath)
@@ -55,7 +56,7 @@ class BaseBuilder(object):
     which makes it useful for caching.
     """
     mhash = util.hash_str(unicode(self.address))
-    for src in self.rule.params['srcs']:
+    for src in self.rule.source_files or []:
       mhash = util.hash_file(open(self.srcs_map[src], 'rb'), hasher=mhash)
     return mhash.hexdigest()
 
@@ -63,8 +64,7 @@ class BaseBuilder(object):
     """Collect and store the outputs from this rule."""
     # TODO: this should probably live in CacheManager.
     for outfile in self.rule.output_files or []:
-      outfile_built = os.path.join(self.buildroot, self.address.path,
-                                   outfile)
+      outfile_built = os.path.join(self.buildroot, outfile)
 
       #git_sha = gitrepo.RepoState().GetRepo(self.address.repo).repo.commit()
       # TODO: git_sha enough is insufficient. More factors to include in hash:
@@ -129,7 +129,7 @@ class BaseTarget(object):
     """Returns the list of output files from this rule.
 
     Should be overridden by inheriting class.
-    Paths must be relative to the location of the build rule.
+    Paths are relative to buildroot.
     """
     raise NotImplementedError
 

@@ -1,5 +1,17 @@
-"""pkgfilegroup targets"""
+"""pkgfilegroup targets
 
+ONLY PARTIALLY IMPLEMENTED!
+
+Works so far:
+  - collects output files from rules given in srcs, emits them as its own
+    outputs
+
+Not yet implemented:
+  - set attributes
+  - put output files in the prefixed directory (should this happen here?)
+"""
+
+import os.path
 from cloudscaling.buildy import address
 from cloudscaling.buildy.targets import base
 from twitter.common import log
@@ -23,14 +35,14 @@ class PkgFileGroup(base.BaseTarget):
 
   @property
   def output_files(self):
-    """Returns the list of output files from this rule."""
+    """Returns the list of output files from this rule.
+
+    Paths are given relative to buildroot.
+    """
     outs = []
     for dep in self.subgraph.successors(self.address):
-      outs.extend(self.subgraph.node[dep]['target_obj'].output_files)
-    log.debug('OUTSSSSSS: %s', outs)
-    log.warn('This is not going to work yet.')
-    # The paths are relative to each rule's address, but what we need is ...
-    # not that. Need them relative to buildroot, I think.
+      dep_rule = self.subgraph.node[dep]['target_obj']
+      outs.extend(dep_rule.output_files)
     return outs
 
   @property
