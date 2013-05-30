@@ -154,6 +154,9 @@ class Butcher(app.Module):
       raise error.OverallBuildFailure('Build failed due to previous errors.')
     else:
       log.info('Success! Built %s', explicit_target)
+      log.info('Outputs:')
+      for item in self.graph.node[explicit_target]['target_obj'].output_files:
+        log.info('  %s', os.path.join(self.buildroot, item))
 
   def LoadGraph(self, startingpoint):
     s_tgt = address.new(startingpoint, target='all')
