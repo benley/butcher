@@ -33,4 +33,4 @@ class VirtualTarget(base.BaseTarget):
 
   @property
   def output_files(self):
-    return None
+    return []
