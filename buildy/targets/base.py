@@ -76,6 +76,13 @@ class BaseBuilder(object):
     for src in self.rule.source_files or []:
       log.debug('[%s]: Metahash input: %s', self.address, src)
       mhash = util.hash_file(open(self.srcs_map[src], 'rb'), hasher=mhash)
+    for dep in self.rule.composed_deps or []:
+      dep_rule = self.rule.subgraph.node[dep]['target_obj']
+      for item in dep_rule.output_files:
+        log.debug('[%s]: Metahash input: %s', self.address, item)
+        item_path = os.path.join(self.buildroot, item)
+        mhash = util.hash_file(open(item_path, 'rb'),
+                               hasher=mhash)
     return mhash
 
   def collect_outs(self):
@@ -89,8 +96,8 @@ class BaseBuilder(object):
       # - commit/state of source repo of all dependencies (or all input files?)
       #   - Actually I like that idea: hash all the input files!
       # - versions of build tools used (?)
-      metahash = self._metahash().hexdigest()
-      log.debug('[%s]: Metahash: %s', self.address, metahash)
+      metahash = self._metahash()
+      log.debug('[%s]: Metahash: %s', self.address, metahash.hexdigest())
       # TODO: record git repo state and buildoptions in cachemgr
       # TODO: move cachemgr to outer controller(?)
       self.cachemgr.putfile(outfile_built, self.buildroot, metahash)

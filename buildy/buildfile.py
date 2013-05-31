@@ -105,7 +105,7 @@ class JsonBuildFile(BuildFile):
       self.add_node(target, {'target_obj': rule_obj})
 
       # dep could be ":blabla" or "//foo:blabla" or "//foo/bar:blabla"
-      for dep in rule_obj.composed_deps:
+      for dep in rule_obj.composed_deps or []:
         d_target = address.new(dep)
         if not d_target.repo:  # ":blabla"
           d_target.repo = self.target.repo

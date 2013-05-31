@@ -8,8 +8,8 @@ from cloudscaling.buildy import error
 class GenDebBuilder(BaseBuilder):
   """Builder for gendeb rules"""
 
-  def collect_srcs(self):
-    pass
+  #def collect_srcs(self):
+  #  pass
 
 
 class GenDeb(BaseTarget):
@@ -39,21 +39,5 @@ class GenDeb(BaseTarget):
       }
 
   def __init__(self, **kwargs):
-    #BaseTarget.__init__(self, name=kwargs['name'])
     self.params = {}
     BaseTarget.__init__(self, **kwargs)
-    #try:
-    #  for param in self.required_params:
-    #    self.params[param] = kwargs.pop(param)
-    #except KeyError:
-    #  raise error.InvalidRule(
-    #      'While loading %s: Required parameter \'%s\' not given.' % (
-    #          self.name, param))
-    #for param in self.optional_params:
-    #  if param in kwargs:
-    #    self.params[param] = kwargs.pop(param)
-
-    #if kwargs:
-    #  raise error.InvalidRule(
-    #      'While loading %s: Unknown parameter(s): %s' % (
-    #          self.name, ', '.join(kwargs.keys())))

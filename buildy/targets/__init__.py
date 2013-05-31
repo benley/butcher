@@ -5,6 +5,7 @@ from cloudscaling.buildy import error
 from .base import BaseTarget
 from .gendeb import GenDeb
 from .genrule import GenRule
+from .filegroup import FileGroup
 from .pkgfilegroup import PkgFileGroup
 from .unimplemented import UnimplementedTarget
 from .virtual import VirtualTarget
@@ -12,9 +13,10 @@ from .virtual import VirtualTarget
 
 TYPE_MAP = {
     'genrule': GenRule,
-    'virtual': VirtualTarget,
     'gendeb': GenDeb,
+    'filegroup': FileGroup,
     'pkgfilegroup': PkgFileGroup,
+    'virtual': VirtualTarget,
     }
 
 

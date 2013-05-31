@@ -5,6 +5,7 @@ python_library(
         'base.py',
         'gendeb.py',
         'genrule.py',
+        'filegroup.py',
         'pkgfilegroup.py',
         'unimplemented.py',
         'virtual.py',
