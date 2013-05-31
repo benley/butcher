@@ -1,18 +1,18 @@
 """gendeb targets"""
 
-from .base import BaseBuilder
-from .base import BaseTarget
-from cloudscaling.buildy import error
+from cloudscaling.butcher.targets import base
+from cloudscaling.butcher.targets import base
+from cloudscaling.butcher import error
 
 
-class GenDebBuilder(BaseBuilder):
+class GenDebBuilder(base.BaseBuilder):
   """Builder for gendeb rules"""
 
   #def collect_srcs(self):
   #  pass
 
 
-class GenDeb(BaseTarget):
+class GenDeb(base.BaseTarget):
   """gendeb rule"""
 
   rulebuilder = GenDebBuilder
@@ -40,4 +40,4 @@ class GenDeb(BaseTarget):
 
   def __init__(self, **kwargs):
     self.params = {}
-    BaseTarget.__init__(self, **kwargs)
+    base.BaseTarget.__init__(self, **kwargs)

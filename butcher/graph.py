@@ -8,7 +8,7 @@ from twitter.common import app
 from twitter.common import util
 
 #gflags.DEFINE_string('depsjson',
-#                     'src/python/cloudscaling/buildy/repodeps.json',
+#                     'src/python/cloudscaling/butcher/repodeps.json',
 #                     'Path to deps json file')
 #FLAGS = gflags.FLAGS
 

@@ -1,13 +1,13 @@
 """Unimplemented target class."""
 
-from . import BaseTarget
+from cloudscaling.butcher.targets import base
 from twitter.common import log
 
 
-class UnimplementedTarget(BaseTarget):
+class UnimplementedTarget(base.BaseTarget):
   ruletype = 'UNKNOWN'
 
   def __init__(self, name, *args, **kwargs):
     log.warn('New Unimplemented %s target: name=%s, %s, %s',
              self.ruletype, name, args, kwargs)
-    BaseTarget.__init__(self, name)
+    base.BaseTarget.__init__(self, name)

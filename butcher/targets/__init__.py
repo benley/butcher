@@ -1,22 +1,22 @@
 """Target rule types."""
 
 from twitter.common import log
-from cloudscaling.buildy import error
-from .base import BaseTarget
-from .gendeb import GenDeb
-from .genrule import GenRule
-from .filegroup import FileGroup
-from .pkgfilegroup import PkgFileGroup
-from .unimplemented import UnimplementedTarget
-from .virtual import VirtualTarget
+from cloudscaling.butcher import error
+from cloudscaling.butcher.targets import base
+from cloudscaling.butcher.targets import gendeb
+from cloudscaling.butcher.targets import genrule
+from cloudscaling.butcher.targets import filegroup
+from cloudscaling.butcher.targets import pkgfilegroup
+from cloudscaling.butcher.targets import unimplemented
+from cloudscaling.butcher.targets import virtual
 
 
 TYPE_MAP = {
-    'genrule': GenRule,
-    'gendeb': GenDeb,
-    'filegroup': FileGroup,
-    'pkgfilegroup': PkgFileGroup,
-    'virtual': VirtualTarget,
+    'genrule': genrule.GenRule,
+    'gendeb': gendeb.GenDeb,
+    'filegroup': filegroup.FileGroup,
+    'pkgfilegroup': pkgfilegroup.PkgFileGroup,
+    'virtual': virtual.VirtualTarget,
     }
 
 

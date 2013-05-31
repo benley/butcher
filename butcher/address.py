@@ -1,7 +1,7 @@
 """Build rule representation."""
 
 import re
-from cloudscaling.buildy import error
+from cloudscaling.butcher import error
 
 
 def new(*args, **kwargs):

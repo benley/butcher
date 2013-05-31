@@ -16,12 +16,12 @@ import pprint
 import shutil
 from twitter.common import log
 from twitter.common import app
-from cloudscaling.buildy import buildfile
-from cloudscaling.buildy import address
-from cloudscaling.buildy import cache
-from cloudscaling.buildy import error
-from cloudscaling.buildy import gitrepo
-from cloudscaling.buildy import util
+from cloudscaling.butcher import buildfile
+from cloudscaling.butcher import address
+from cloudscaling.butcher import cache
+from cloudscaling.butcher import error
+from cloudscaling.butcher import gitrepo
+from cloudscaling.butcher import util
 
 app.add_option('--debug', action='store_true', dest='debug')
 app.add_option('--basedir', dest='butcher_basedir',

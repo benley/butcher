@@ -1,7 +1,7 @@
 """filegroup targets"""
 
 import os.path
-from cloudscaling.buildy.targets import base
+from cloudscaling.butcher.targets import base
 
 
 class FileGroupBuilder(base.BaseBuilder):

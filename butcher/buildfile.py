@@ -5,11 +5,11 @@ We're using OCS_BUILD.data in place of BUILD for now.
 
 import json
 import networkx
-from cloudscaling.buildy import address
-from cloudscaling.buildy import error
-from cloudscaling.buildy import targets
+from cloudscaling.butcher import address
+from cloudscaling.butcher import error
+from cloudscaling.butcher import targets
 # TODO: maybe use this?
-#from cloudscaling.buildy import gitrepo
+#from cloudscaling.butcher import gitrepo
 from twitter.common import log
 
 

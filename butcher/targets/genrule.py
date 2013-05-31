@@ -4,8 +4,8 @@ import os
 import subprocess
 import sys
 import stat
-from cloudscaling.buildy import error
-from cloudscaling.buildy.targets import base
+from cloudscaling.butcher import error
+from cloudscaling.butcher.targets import base
 from twitter.common import log
 
 

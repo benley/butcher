@@ -2,8 +2,8 @@
 
 import os
 import shutil
-from cloudscaling.buildy import gitrepo
-from cloudscaling.buildy import error
+from cloudscaling.butcher import gitrepo
+from cloudscaling.butcher import error
 from twitter.common import app
 from twitter.common import log
 

@@ -4,11 +4,11 @@ import io
 import networkx
 import os
 import shutil
-from cloudscaling.buildy import address
-from cloudscaling.buildy import cache
-from cloudscaling.buildy import error
-from cloudscaling.buildy import gitrepo
-from cloudscaling.buildy import util
+from cloudscaling.butcher import address
+from cloudscaling.butcher import cache
+from cloudscaling.butcher import error
+from cloudscaling.butcher import gitrepo
+from cloudscaling.butcher import util
 from twitter.common import log
 
 

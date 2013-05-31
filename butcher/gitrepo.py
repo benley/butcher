@@ -10,7 +10,7 @@ import gitdb
 import os
 from twitter.common import app
 from twitter.common import log
-from cloudscaling.buildy import address
+from cloudscaling.butcher import address
 
 app.add_option('--repo_baseurl', dest='repo_baseurl',
                help='Base URL to git repo collection.',

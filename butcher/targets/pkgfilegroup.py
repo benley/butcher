@@ -11,8 +11,8 @@ Not yet implemented:
   - put output files in the prefixed directory (should this happen here?)
 """
 
-from cloudscaling.buildy import address
-from cloudscaling.buildy.targets import base
+from cloudscaling.butcher import address
+from cloudscaling.butcher.targets import base
 
 
 class PkgFileGroupBuilder(base.BaseBuilder):
