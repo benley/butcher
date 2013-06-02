@@ -11,6 +11,7 @@ python_library(
         'virtual.py',
         ],
     dependencies = [
+        pants('src/python/cloudscaling/butcher:gitrepo'),
         pants('3rdparty/python:networkx'),
         ],
     )

@@ -23,6 +23,7 @@ python_library(
         'buildfile.py',
         'butcher.py',
         'cache.py',
+        'buildfile_context.py',
         'error.py',
         'util.py',
         ],

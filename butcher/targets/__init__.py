@@ -19,6 +19,12 @@ TYPE_MAP = {
     'virtual': virtual.VirtualTarget,
     }
 
+__all__ = [
+    'genrule',
+    'gendeb',
+    'filegroup',
+    'pkgfilegroup',
+    ]
 
 def new(ruletype, **kwargs):
   """Instantiate a new build rule based on kwargs.

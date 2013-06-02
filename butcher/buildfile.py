@@ -5,11 +5,11 @@ We're using OCS_BUILD.data in place of BUILD for now.
 
 import json
 import networkx
+import os
 from cloudscaling.butcher import address
 from cloudscaling.butcher import error
 from cloudscaling.butcher import targets
-# TODO: maybe use this?
-#from cloudscaling.butcher import gitrepo
+from cloudscaling.butcher import gitrepo
 from twitter.common import log
 
 
@@ -26,10 +26,19 @@ class BuildFile(networkx.DiGraph):
 
   def __init__(self, stream, reponame, path=''):
     self.target = address.new(repo=reponame, path=path)
+    self.address = self.target
+    #TODO: finish the target->address refactor
     networkx.DiGraph.__init__(self, name=self.target)
 
     self._parse(stream)
     self.validate_internal_deps()
+
+  def get_repo(self):
+    return gitrepo.RepoState().GetRepo(self.address.repo)
+
+  @property
+  def path_on_disk(self):
+    return os.path.join(self.get_repo(), self.address.path)
 
   def _parse(self, stream):
     """Parse and load a stream's contents into the digraph."""
@@ -134,5 +143,9 @@ class JsonBuildFile(BuildFile):
 class PythonBuildFile(BuildFile):
   """Python-based build file implementation!"""
 
+  def __init__(self, stream, reponame, path=''):
+    BuildFile.__init__(self, stream, reponame, path)
+    self.code = None
+
   def _parse(self, stream):
-    code = compile(stream.read(), self.target, 'exec')
+    self.code = compile(stream.read(), self.target, 'exec')
