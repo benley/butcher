@@ -38,7 +38,8 @@ class BuildFile(networkx.DiGraph):
 
   @property
   def path_on_disk(self):
-    return os.path.join(self.get_repo(), self.address.path)
+    return os.path.join(self.get_repo().repo.tree().abspath,
+                        self.address.path)
 
   def _parse(self, stream):
     """Parse and load a stream's contents into the digraph."""
@@ -144,8 +145,8 @@ class PythonBuildFile(BuildFile):
   """Python-based build file implementation!"""
 
   def __init__(self, stream, reponame, path=''):
-    BuildFile.__init__(self, stream, reponame, path)
     self.code = None
+    BuildFile.__init__(self, stream, reponame, path)
 
   def _parse(self, stream):
-    self.code = compile(stream.read(), self.target, 'exec')
+    self.code = compile(stream.read(), str(self.target), 'exec')

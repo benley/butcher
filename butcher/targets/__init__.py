@@ -2,21 +2,19 @@
 
 from twitter.common import log
 from cloudscaling.butcher import error
-from cloudscaling.butcher.targets import base
-from cloudscaling.butcher.targets import gendeb
-from cloudscaling.butcher.targets import genrule
-from cloudscaling.butcher.targets import filegroup
-from cloudscaling.butcher.targets import pkgfilegroup
-from cloudscaling.butcher.targets import unimplemented
+from cloudscaling.butcher.targets.gendeb import GenDeb as gendeb
+from cloudscaling.butcher.targets.genrule import GenRule as genrule
+from cloudscaling.butcher.targets.filegroup import FileGroup as filegroup
+from cloudscaling.butcher.targets.pkgfilegroup import PkgFileGroup as pkgfilegroup
 from cloudscaling.butcher.targets import virtual
 
 
 TYPE_MAP = {
-    'genrule': genrule.GenRule,
-    'gendeb': gendeb.GenDeb,
-    'filegroup': filegroup.FileGroup,
-    'pkgfilegroup': pkgfilegroup.PkgFileGroup,
-    'virtual': virtual.VirtualTarget,
+    'genrule': genrule,
+    'gendeb': gendeb,
+    'filegroup': filegroup,
+    'pkgfilegroup': pkgfilegroup,
+    'virtual': virtual,
     }
 
 __all__ = [
