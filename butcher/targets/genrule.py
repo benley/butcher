@@ -26,9 +26,8 @@ class GenRuleBuilder(base.BaseBuilder):
                             stdout=sys.stdout, stderr=sys.stderr)
     returncode = proc.wait()
     if returncode != 0:
-      raise error.TargetBuildFailed(
-          self.rule.name,
-          'cmd returned %s.' % (returncode))
+      raise error.TargetBuildFailed(self.rule.name,
+                                    'cmd returned %s.' % (returncode))
     elif self.rule.params['executable']:
       # GenRule.__init__ already ensured that there is only one output file if
       # executable=1 is set.

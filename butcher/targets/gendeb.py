@@ -1,12 +1,14 @@
 """gendeb targets"""
 
 from cloudscaling.butcher.targets import base
-from cloudscaling.butcher.targets import base
 from cloudscaling.butcher import error
 
 
 class GenDebBuilder(base.BaseBuilder):
   """Builder for gendeb rules"""
+
+  def build(self):
+    pass
 
   #def collect_srcs(self):
   #  pass
@@ -19,7 +21,7 @@ class GenDeb(base.BaseTarget):
   ruletype = 'gendeb'
 
   required_params = [
-      'name', 'version', 'long_description', 'short_description']
+      'name', 'version', 'release', 'long_description', 'short_description']
   optional_params = {
       'deps': None,
       'arch': 'all',
@@ -41,3 +43,10 @@ class GenDeb(base.BaseTarget):
   def __init__(self, **kwargs):
     self.params = {}
     base.BaseTarget.__init__(self, **kwargs)
+    if not self.params['package_name']:
+      self.params['package_name'] = self.params['name']
+
+  @property
+  def output_files(self):
+    return [
+        '%(package_name)s_%(version)s-%(release)s_%(arch)s.deb' % self.params]

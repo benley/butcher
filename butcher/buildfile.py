@@ -12,6 +12,7 @@ from cloudscaling.butcher import buildfile_context
 from cloudscaling.butcher import error
 from cloudscaling.butcher import targets
 from cloudscaling.butcher import gitrepo
+from twitter.common import app
 from twitter.common import log
 
 
@@ -36,7 +37,17 @@ class BuildFile(networkx.DiGraph):
     #TODO: finish the target->address refactor
     networkx.DiGraph.__init__(self, name=self.target)
 
-    self._parse(stream)
+    # HACK ALERT: changing foreign module variables to set context...
+    address.CUR_REPO = self.address.repo
+    address.CUR_PATH = self.address.path
+
+    try:
+      self._parse(stream)
+    except error.InvalidRule as err:
+      raise error.BrokenGraph('%s (in file: %s)' % (
+          err, os.path.join(self.path_on_disk,
+                            app.get_options().buildfile_name)))
+
     self.validate_internal_deps()
 
     # Add the :all node (unless it's explicitly defined in the build file...)
@@ -45,7 +56,7 @@ class BuildFile(networkx.DiGraph):
       log.debug('New target: %s', self.target)
       self.add_node(
           self.target,
-          {'target_obj': targets.new(name=self.target,
+          {'target_obj': targets.new(name='all',
                                      ruletype='virtual',
                                      deps=[x for x in self.local_targets])})
 
@@ -53,6 +64,10 @@ class BuildFile(networkx.DiGraph):
         if node.repo == self.target.repo and node != self.target:
           log.debug('New dep: %s -> %s', self.target, node)
           self.add_edge(self.target, node)
+
+    address.CUR_REPO = None
+    address.CUR_PATH = ''
+
 
   def get_repo(self):
     return gitrepo.RepoState().GetRepo(self.address.repo)
@@ -158,9 +173,6 @@ class PythonBuildFile(BuildFile):
   def _parse(self, stream):
     self.code = compile(stream.read(), str(self.target), 'exec')
     targets.base.BaseTarget.graphcontext = self
-    # HACK ALERT: changing foreign module variables to set context...
-    address.CUR_REPO = self.address.repo
-    address.CUR_PATH = self.address.path
     context = buildfile_context.ParseContext(self)
     context.parse()
 
@@ -175,5 +187,3 @@ class PythonBuildFile(BuildFile):
           self.add_node(d_target)
         log.debug('New dep: %s -> %s', node, d_target)
         self.add_edge(node, d_target)
-    address.CUR_REPO = None
-    address.CUR_PATH = ''

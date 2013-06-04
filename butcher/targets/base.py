@@ -1,6 +1,7 @@
 """Base target."""
 
 import os
+import re
 import shutil
 from cloudscaling.butcher import address
 from cloudscaling.butcher import cache
@@ -87,6 +88,9 @@ class BaseBuilder(object):
     # TODO: this should probably live in CacheManager.
     for outfile in self.rule.output_files or []:
       outfile_built = os.path.join(self.buildroot, outfile)
+      if not os.path.exists(outfile_built):
+        raise error.TargetBuildFailed(self.address,
+                                      'Output file is missing: %s' % outfile)
 
       #git_sha = gitrepo.RepoState().GetRepo(self.address.repo).repo.commit()
       # git_sha is insufficient, and is actually not all that useful.
@@ -105,6 +109,7 @@ class BaseBuilder(object):
     self.collect_deps()
 
   def is_cached(self):
+    """Returns true if this rule is already cached."""
     # TODO: cache by target+hash, not per file.
     try:
       for item in self.rule.output_files:
@@ -130,6 +135,8 @@ class BaseBuilder(object):
 
 class BaseTarget(object):
   """Partially abstract base class for build targets."""
+  # graphcontext is attached by PythonBuildFile. If present, instances of this
+  # class add themselves to the given networkx graph.
   graphcontext = None
 
   rulebuilder = BaseBuilder
@@ -137,6 +144,9 @@ class BaseTarget(object):
 
   required_params = ['name']
   optional_params = {}
+
+  # List of callables that make assertions about inputs.
+  input_validators = []
 
   def __init__(self, **kwargs):
     """Initialize the build rule.
@@ -170,6 +180,30 @@ class BaseTarget(object):
 
     if self.graphcontext is not None:
       self.graphcontext.add_node(self.address, target_obj=self)
+      # TODO: process deps here?
+
+    # Input validators:
+    def validate_name():
+      allowed_re = '^[a-z](([a-z0-9_-]+)?([a-z0-9])?)?'
+      assert isinstance(self.params['name'], basestring), (
+          'Name must be a string, not %s' % repr(self.params['name']))
+      assert re.match(allowed_re, self.params['name']), (
+          'Invalid rule name: %s. Must match %s.' % (
+              repr(self.params['name']), repr(allowed_re)))
+    self.input_validators.append(validate_name)
+
+    def validate_deps():
+      if 'deps' in self.params:
+        assert type(self.params['deps']) in (type(None), list), (
+            'Deps must be a list, not %s' % repr(self.params['deps']))
+    self.input_validators.append(validate_deps)
+    # End input validators
+
+    try:
+      for validator in self.input_validators:
+        validator()
+    except AssertionError as err:
+      raise error.InvalidRule('Error in %s: %s' % (self.address, err))
 
   @property
   def output_files(self):
@@ -178,7 +212,8 @@ class BaseTarget(object):
     Should be overridden by inheriting class.
     Paths are relative to buildroot.
     """
-    raise NotImplementedError('[%s]: Implementation is broken.' % self.address)
+    raise NotImplementedError(
+        '[%s]: Implementation is incomplete.' % self.address)
 
   @property
   def composed_deps(self):

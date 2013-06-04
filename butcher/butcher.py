@@ -27,9 +27,13 @@ app.add_option('--debug', action='store_true', dest='debug')
 app.add_option('--basedir', dest='butcher_basedir',
                help='Base directory for butcher to work in.',
                default=os.path.join(util.user_homedir(), '_butcher.data'))
-app.add_option('--build_root', dest='build_root', help=(
-    'Base directory in which builds will be done. If unspecified, makes a '
-    'build directory inside of the butcher basedir.'))
+app.add_option('--build_root', dest='build_root',
+               help=('Base directory in which builds will be done. '
+                     'If unspecified, makes a build directory inside of the '
+                     'butcher basedir.'))
+app.add_option('--buildfile_name', dest='buildfile_name',
+               help='Filename to use as BUILD files in each directory.',
+               default='OCS_BUILD.data')
 
 RepoState = gitrepo.RepoState
 
@@ -218,7 +222,7 @@ class Butcher(app.Module):
   def load_buildfile(self, target):
     """Pull a build file from git."""
     log.info('Loading: %s', target)
-    filepath = os.path.join(target.path, 'OCS_BUILD.data')
+    filepath = os.path.join(target.path, app.get_options().buildfile_name)
     try:
       repo = self.repo_state.GetRepo(target.repo)
       return repo.get_file(filepath)
@@ -280,7 +284,8 @@ def clean(args):
 def dump(args):
   """Load the build graph for a target and dump it to stdout."""
   try:
-    bb = Butcher(args[0])
+    bb = Butcher()
+    bb.LoadGraph(args[0])
   except error.BrokenGraph as lolno:
     log.fatal(lolno)
     app.quit(1)
