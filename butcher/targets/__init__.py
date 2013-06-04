@@ -6,7 +6,7 @@ from cloudscaling.butcher.targets.gendeb import GenDeb as gendeb
 from cloudscaling.butcher.targets.genrule import GenRule as genrule
 from cloudscaling.butcher.targets.filegroup import FileGroup as filegroup
 from cloudscaling.butcher.targets.pkgfilegroup import PkgFileGroup as pkgfilegroup
-from cloudscaling.butcher.targets import virtual
+from cloudscaling.butcher.targets.virtual import VirtualTarget as virtual
 
 
 TYPE_MAP = {

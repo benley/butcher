@@ -3,6 +3,10 @@
 import re
 from cloudscaling.butcher import error
 
+# These are manipulated by PythonBuildFile to set context.
+CUR_REPO = None
+CUR_PATH = ''
+
 
 def new(*args, **kwargs):
   """Return a new Address object."""
@@ -19,9 +23,15 @@ class Address(dict):
   params = ('repo', 'git_ref', 'path', 'target')
 
   def __init__(self, *args, **kwargs):
-    dict.__init__(self, {'repo': None, 'git_ref': '',
-                         'path': '', 'target': 'all'})
+    dict.__init__(self, {'repo': None,
+                         'git_ref': '',
+                         'path': '',
+                         'target': 'all'})
     self.update(*args, **kwargs)
+    if not self.repo and CUR_REPO is not None:
+      self.repo = str(CUR_REPO)  # str() to ensure copy, not reference
+    if not self.path:
+      self.path = str(CUR_PATH)
 
   def __hash__(self):
     return hash(self.__repr__())
@@ -122,6 +132,10 @@ class Address(dict):
               'path': 'dir/path',
               'target': 'targetname}
     """
+    # 'blah' -> ':blah'
+    if not (':' in targetstr or '/' in targetstr):
+      targetstr = ':%s' % targetstr
+
     match = re.match(
         r'^(?://(?P<repo>[\w-]+)(?:\[(?P<git_ref>.*)\])?)?'
         r'(?:$|/?(?P<path>[\w/-]+)?(?::?(?P<target>[\w-]+)?))', targetstr)

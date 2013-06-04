@@ -6,7 +6,9 @@ We're using OCS_BUILD.data in place of BUILD for now.
 import json
 import networkx
 import os
+import StringIO
 from cloudscaling.butcher import address
+from cloudscaling.butcher import buildfile_context
 from cloudscaling.butcher import error
 from cloudscaling.butcher import targets
 from cloudscaling.butcher import gitrepo
@@ -14,11 +16,15 @@ from twitter.common import log
 
 
 def load(stream, reponame, path):
+  exception_list = []
+  data = StringIO.StringIO(stream.read())
   for impl in (JsonBuildFile, PythonBuildFile):
     try:
-      return impl(stream, reponame, path)
-    except ValueError:
-      raise error.ButcherError('Unable to parse this buildfile.')
+      return impl(data, reponame, path)
+    except ValueError as err:
+      exception_list.append(err)
+      data.seek(0)
+  raise error.ButcherError('Unable to parse this buildfile: %s', exception_list)
 
 
 class BuildFile(networkx.DiGraph):
@@ -32,6 +38,21 @@ class BuildFile(networkx.DiGraph):
 
     self._parse(stream)
     self.validate_internal_deps()
+
+    # Add the :all node (unless it's explicitly defined in the build file...)
+    #                   (note: please don't do that to yourself)
+    if self.target not in self.node:
+      log.debug('New target: %s', self.target)
+      self.add_node(
+          self.target,
+          {'target_obj': targets.new(name=self.target,
+                                     ruletype='virtual',
+                                     deps=[x for x in self.local_targets])})
+
+      for node in self.node:
+        if node.repo == self.target.repo and node != self.target:
+          log.debug('New dep: %s -> %s', self.target, node)
+          self.add_edge(self.target, node)
 
   def get_repo(self):
     return gitrepo.RepoState().GetRepo(self.address.repo)
@@ -125,20 +146,6 @@ class JsonBuildFile(BuildFile):
           self.add_node(d_target)
         log.debug('New dep: %s -> %s', target, d_target)
         self.add_edge(target, d_target)
-    # Add the :all node (unless it's explicitly defined in the build file...)
-    #                   (note: please don't do that to yourself)
-    if self.target not in self.node:
-      log.debug('New target: %s', self.target)
-      self.add_node(
-          self.target,
-          {'target_obj': targets.new(name=self.target,
-                                     ruletype='virtual',
-                                     deps=[x for x in self.local_targets])})
-
-      for node in self.node:
-        if node.repo == self.target.repo and node != self.target:
-          log.debug('New dep: %s -> %s', self.target, node)
-          self.add_edge(self.target, node)
 
 
 class PythonBuildFile(BuildFile):
@@ -150,3 +157,23 @@ class PythonBuildFile(BuildFile):
 
   def _parse(self, stream):
     self.code = compile(stream.read(), str(self.target), 'exec')
+    targets.base.BaseTarget.graphcontext = self
+    # HACK ALERT: changing foreign module variables to set context...
+    address.CUR_REPO = self.address.repo
+    address.CUR_PATH = self.address.path
+    context = buildfile_context.ParseContext(self)
+    context.parse()
+
+    for node in self.nodes():
+      for dep in self.node[node]['target_obj'].composed_deps or []:
+        d_target = address.new(dep)
+        if not d_target.repo:
+          d_target.repo = self.target.repo
+        if d_target.repo == self.target.repo and not d_target.path:
+          d_target.path = self.target.path
+        if d_target not in self.nodes():
+          self.add_node(d_target)
+        log.debug('New dep: %s -> %s', node, d_target)
+        self.add_edge(node, d_target)
+    address.CUR_REPO = None
+    address.CUR_PATH = ''

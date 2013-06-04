@@ -1,13 +1,10 @@
 """Base target."""
 
-import io
-import networkx
 import os
 import shutil
 from cloudscaling.butcher import address
 from cloudscaling.butcher import cache
 from cloudscaling.butcher import error
-from cloudscaling.butcher import gitrepo
 from cloudscaling.butcher import util
 from twitter.common import log
 
@@ -92,7 +89,8 @@ class BaseBuilder(object):
       outfile_built = os.path.join(self.buildroot, outfile)
 
       #git_sha = gitrepo.RepoState().GetRepo(self.address.repo).repo.commit()
-      # TODO: git_sha enough is insufficient. More factors to include in hash:
+      # git_sha is insufficient, and is actually not all that useful.
+      # More factors to include in hash:
       # - commit/state of source repo of all dependencies (or all input files?)
       #   - Actually I like that idea: hash all the input files!
       # - versions of build tools used (?)
@@ -107,6 +105,7 @@ class BaseBuilder(object):
     self.collect_deps()
 
   def is_cached(self):
+    # TODO: cache by target+hash, not per file.
     try:
       for item in self.rule.output_files:
         log.info(item)
@@ -131,6 +130,7 @@ class BaseBuilder(object):
 
 class BaseTarget(object):
   """Partially abstract base class for build targets."""
+  graphcontext = None
 
   rulebuilder = BaseBuilder
   ruletype = None
@@ -144,10 +144,11 @@ class BaseTarget(object):
     Args:
       **kwargs: Assorted parameters; see subclass implementations for details.
     """
-    self.name = kwargs['name']
-    self.address = address.new(self.name)
-    self.subgraph = networkx.DiGraph()
+    self.address = self.name = address.new(kwargs['name'])
+    # TODO: eliminate use of .name
+    self.subgraph = None
     self.params = {}
+    log.debug('New target: %s', self.address)
 
     try:
       for param in self.required_params:
@@ -155,7 +156,7 @@ class BaseTarget(object):
     except KeyError:
       raise error.InvalidRule(
           'While loading %s: Required parameter \'%s\' not given.' % (
-              self.name, param))
+              self.address, param))
     for param in self.optional_params:
       if param in kwargs:
         self.params[param] = kwargs.pop(param)
@@ -165,7 +166,10 @@ class BaseTarget(object):
     if kwargs:
       raise error.InvalidRule(
           '[%s]: Unknown parameter(s): %s' % (
-              self.name, ', '.join(kwargs.keys())))
+              self.address, ', '.join(kwargs.keys())))
+
+    if self.graphcontext is not None:
+      self.graphcontext.add_node(self.address, target_obj=self)
 
   @property
   def output_files(self):

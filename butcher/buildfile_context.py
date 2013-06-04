@@ -3,7 +3,9 @@
 import collections
 import contextlib
 import copy
+import numbers
 import os
+import sys
 from cloudscaling.butcher import error
 
 class ContextError(error.ButcherError):
@@ -12,10 +14,10 @@ class ContextError(error.ButcherError):
 
 
 class ParseContext(object):
+  """Manage conext for parsing/loading BUILD files."""
   _active = collections.deque([])
   _parsed = set()
   _strs_to_exec = [
-      'print "IN CONTEXT WOOO"',
       'from cloudscaling.butcher.targets import *',
       ]
 
@@ -41,12 +43,6 @@ class ParseContext(object):
     self.build_file = build_file
     self._parsed = False
 
-  @staticmethod
-  def _exec_function(ast, globals_map):
-    locals_map = globals_map
-    exec(ast, globals_map, locals_map)
-    return locals_map
-
   def parse(self, **global_args):
     """Entry point to parsing a BUILD file."""
 
@@ -56,7 +52,7 @@ class ParseContext(object):
       butcher_context = {}
       for str_to_exec in self._strs_to_exec:
         ast = compile(str_to_exec, '<string>', 'exec')
-        self._exec_function(ast, butcher_context)
+        exec_function(ast, butcher_context)
 
       with ParseContext.activate(self):
         startdir = os.path.abspath(os.curdir)
@@ -69,6 +65,12 @@ class ParseContext(object):
                 {'ROOT_DIR': self.build_file.path_on_disk,
                  '__file__': 'bogus please fix this'})
             eval_globals.update(global_args)
-            self._exec_function(self.build_file.code(), eval_globals)
+            exec_function(self.build_file.code, eval_globals)
         finally:
           os.chdir(startdir)
+
+
+def exec_function(ast, globals_map):
+  locals_map = globals_map
+  exec ast in globals_map, locals_map
+  return locals_map
