@@ -25,7 +25,5 @@ class FileGroup(base.BaseTarget):
 
     Paths are relative to buildroot.
     """
-    outs = []
     for item in self.source_files:
-      outs.append(os.path.join(self.address.repo, self.address.path, item))
-    return outs
+      yield os.path.join(self.address.repo, self.address.path, item)

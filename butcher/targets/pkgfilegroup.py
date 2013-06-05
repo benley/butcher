@@ -25,7 +25,7 @@ class PkgFileGroupBuilder(base.BaseBuilder):
     for dep in self.rule.composed_deps:
       dep_rule = self.rule.subgraph.node[dep]['target_obj']
       for dep_file in dep_rule.output_files:
-        src = os.path.join(self.buildroot, dep_rule.address.path, dep_file)
+        src = os.path.join(self.buildroot, dep_file)
         dst = self.rule.translate_path(dep_file, dep_rule)
         output_dst = os.path.join(self.buildroot, dst)
         output_dstdir = os.path.dirname(output_dst)
@@ -40,10 +40,9 @@ class PkgFileGroup(base.BaseTarget):
   rulebuilder = PkgFileGroupBuilder
   ruletype = 'pkgfilegroup'
 
-  required_params = [
-      ('name', str),
-      ('prefix', str),
-      ('srcs', list)]
+  required_params = [('name', str),
+                     ('prefix', str),
+                     ('srcs', list)]
   optional_params = [
       ('attr', list, None),
       ('section', str, None),  # one of ('', 'doc', 'config')
