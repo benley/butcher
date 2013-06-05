@@ -34,18 +34,22 @@ app.add_option('--build_root', dest='build_root',
 app.add_option('--buildfile_name', dest='buildfile_name',
                help='Filename to use as BUILD files in each directory.',
                default='OCS_BUILD.data')
-
-RepoState = gitrepo.RepoState
+app.add_option('--rebuild_all', action='store_true', dest='disable_cache_fetch',
+               help='Disable cache fetching and explicitly build each target.')
 
 
 class Butcher(app.Module):
   """Butcher!"""
 
+  options = {
+      'cache_fetch': True,
+      }
+
   def __init__(self):
     app.Module.__init__(self, label='butcher',
                         description='Butcher build system.',
                         dependencies='twitter.common.log')
-    self.repo_state = RepoState()
+    self.repo_state = gitrepo.RepoState()
     self.graph = networkx.DiGraph()
     # TODO: there isn't really a good reason to keep all the separate subgraphs.
     self.subgraphs = {}
@@ -63,6 +67,8 @@ class Butcher(app.Module):
     self.buildroot = app.get_options().build_root
     if not os.path.exists(self.buildroot):
       os.makedirs(self.buildroot)
+    if app.get_options().disable_cache_fetch:
+      self.options['cache_fetch'] = False
 
   def Clean(self):
     """Clear the contents of the build area."""
@@ -75,6 +81,8 @@ class Butcher(app.Module):
   def Build(self, explicit_target):
     if explicit_target not in self.graph.nodes():
       raise error.NoSuchTargetError('No rule defined for %s' % explicit_target)
+    if not self.options['cache_fetch']:
+      log.info('Cache fetching disabled.')
 
     # Get the subgraph of only the things we need built.
     # (yes, topological sort accomplishes that)
@@ -145,11 +153,16 @@ class Butcher(app.Module):
               # TODO: this is absurd:
               self.repo_state.GetRepo(node.repo).repo.tree().abspath)
           node_builder.prep()
-          try:
-            node_builder.get_from_cache()
-            log.info('[%s]: cache hit', node)
-          except cache.CacheMiss as err:
-            log.debug('[%s]: cache miss: %s', node, err)
+          if self.options['cache_fetch']:
+            try:
+              node_builder.get_from_cache()
+              log.info('[%s]: cache hit', node)
+            except cache.CacheMiss as err:
+              log.debug('[%s]: cache miss: %s', node, err)
+              log.info('[%s]: Building.', node)
+              node_builder.build()
+              node_builder.collect_outs()
+          else:
             log.info('[%s]: Building.', node)
             node_builder.build()
             node_builder.collect_outs()
@@ -251,8 +264,8 @@ def resolve(args):
 def build(args):
   """Build a target and its dependencies."""
 
-  if not args:
-    log.error('Target required.')
+  if len(args) != 1:
+    log.error('One target required.')
     app.quit(1)
 
   target = address.new(args[0])
@@ -271,6 +284,19 @@ def build(args):
     log.fatal(err)
     log.fatal('Error list:')
     [ log.fatal('  [%s]: %s', e.node, e) for e in bb.failure_log ]
+
+
+@app.command
+def rebuild(args):
+  """Fully rebuild a target and deps, even if it has been built and cached."""
+  if len(args) != 1:
+    log.fatal('One target required.')
+    app.quit(1)
+
+  clean(None)
+  app.set_option('disable_cache_fetch', True)
+  Butcher.options['cache_fetch'] = False
+  build(args)
 
 
 @app.command
