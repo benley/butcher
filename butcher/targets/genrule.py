@@ -49,12 +49,10 @@ class GenRule(base.BaseTarget):
   rulebuilder = GenRuleBuilder
   ruletype = 'genrule'
 
-  required_params = ['name', 'cmd', 'outs']
-  optional_params = {
-      'srcs': None,
-      'deps': None,
-      'executable': False,
-      }
+  required_params = [('name', str), ('cmd', str), ('outs', list)]
+  optional_params = [('srcs', list, None),
+                     ('deps', list, None),
+                     ('executable', bool, False)]
 
   def __init__(self, **kwargs):
     base.BaseTarget.__init__(self, **kwargs)

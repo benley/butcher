@@ -15,7 +15,6 @@ class InvalidRule(ButcherError):
   """That is totally not a valid build rule."""
   pass
 
-
 class BuildFailure(ButcherError):
   """Parent for build failures."""
   pass

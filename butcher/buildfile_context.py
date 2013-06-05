@@ -1,11 +1,21 @@
-"""Parsing context manager for BUILD files."""
+"""Parsing context manager for BUILD files.
+
+Things available in BUILD context:
+  invokable rules:
+    - At the time of writing this: genrule, gendeb, filegroup, pkgfilegroup
+    - See documentation for each type.
+    - For a list see cloudscaling.butcher.targets.__init__.py
+  functions:
+    - glob: see python help for glob.glob
+  variables:
+    - ROOTDIR: path to the source tree root.
+    - RULEDIR: path to the directory the BUILD file is in.
+"""
 
 import collections
 import contextlib
 import copy
-import numbers
 import os
-import sys
 from cloudscaling.butcher import error
 
 class ContextError(error.ButcherError):
@@ -14,11 +24,12 @@ class ContextError(error.ButcherError):
 
 
 class ParseContext(object):
-  """Manage conext for parsing/loading BUILD files."""
+  """Manage context for parsing/loading BUILD files."""
   _active = collections.deque([])
   _parsed = set()
   _strs_to_exec = [
       'from cloudscaling.butcher.targets import *',
+      'from glob import glob',
       ]
 
   @staticmethod
@@ -44,7 +55,11 @@ class ParseContext(object):
     self._parsed = False
 
   def parse(self, **global_args):
-    """Entry point to parsing a BUILD file."""
+    """Entry point to parsing a BUILD file.
+
+    Args:
+      **global_args: Variables to include in the parsing context environment.
+    """
 
     if self.build_file not in ParseContext._parsed:
       # http://en.wikipedia.org/wiki/Abstract_syntax_tree
@@ -71,6 +86,13 @@ class ParseContext(object):
 
 
 def exec_function(ast, globals_map):
+  """Execute a python code object in the given environment.
+
+  Args:
+    globals_map: Dictionary to use as the globals context.
+  Returns:
+    locals_map: Dictionary of the locals from the environment after execution.
+  """
   locals_map = globals_map
   exec ast in globals_map, locals_map
   return locals_map

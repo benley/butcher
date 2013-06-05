@@ -28,12 +28,14 @@ class PkgFileGroup(base.BaseTarget):
   rulebuilder = PkgFileGroupBuilder
   ruletype = 'pkgfilegroup'
 
-  required_params = ['name', 'prefix', 'srcs']
-  optional_params = {
-      'attr': None,
-      'section': None,  # one of ('', 'doc', 'config')
-      'strip_prefix': None,
-      }
+  required_params = [
+      ('name', str),
+      ('prefix', str),
+      ('srcs', list)]
+  optional_params = [
+      ('attr', list, None),
+      ('section', str, None),  # one of ('', 'doc', 'config')
+      ('strip_prefix', str,  None)]
 
   @property
   def output_files(self):

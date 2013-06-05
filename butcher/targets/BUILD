@@ -7,6 +7,7 @@ python_library(
         'genrule.py',
         'filegroup.py',
         'pkgfilegroup.py',
+        'pkg_symlink.py',
         'unimplemented.py',
         'virtual.py',
         ],

@@ -16,8 +16,8 @@ class FileGroup(base.BaseTarget):
   """filegroup rule."""
   rulebuilder = FileGroupBuilder
   ruletype = 'filegroup'
-  required_params = ['name', 'srcs']
-  optional_params = {}
+  required_params = [('name', str), ('srcs', list)]
+  optional_params = []
 
   @property
   def output_files(self):

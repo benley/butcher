@@ -142,11 +142,12 @@ class BaseTarget(object):
   rulebuilder = BaseBuilder
   ruletype = None
 
-  required_params = ['name']
-  optional_params = {}
+  # List of tuples: [('argument_name', type), ...]
+  required_params = [('name', str)]
 
-  # List of callables that make assertions about inputs.
-  input_validators = []
+  # List of tuples: ('arg_name', type, 'default value'), ...
+  # or ('arg_name', (list, of, types), 'default value'), ...
+  optional_params = []
 
   def __init__(self, **kwargs):
     """Initialize the build rule.
@@ -161,28 +162,53 @@ class BaseTarget(object):
     log.debug('New target: %s', self.address)
 
     try:
-      for param in self.required_params:
-        self.params[param] = kwargs.pop(param)
-    except KeyError:
-      raise error.InvalidRule(
-          'While loading %s: Required parameter \'%s\' not given.' % (
-              self.address, param))
-    for param in self.optional_params:
-      if param in kwargs:
-        self.params[param] = kwargs.pop(param)
+      for param_name, param_type in self.required_params:
+        self.params[param_name] = kwargs.pop(param_name)
+        assert isinstance(self.params[param_name], param_type)
+    except AssertionError as err:
+      if isinstance(param_type, tuple) and len(param_type) > 1:
+        msg = 'one of: %s' % ', '.join(param_type.__name__)
       else:
-        self.params[param] = self.optional_params[param]
-
-    if kwargs:
+        msg = str(param_type.__name__)
       raise error.InvalidRule(
-          '[%s]: Unknown parameter(s): %s' % (
-              self.address, ', '.join(kwargs.keys())))
+          'While loading %s: Invalid type for %s. Expected: %s. Actual: %s.' % (
+               self.address, param_name, msg, repr(self.params[param_name])))
+    except KeyError as err:
+      log.error(err)
+      raise error.InvalidRule(
+          'While loading %s: Required parameter %s not given.' % repr(
+              self.address, param_name))
+
+    for (param_name, param_type, param_default) in self.optional_params:
+      if param_name not in kwargs:
+        self.params[param_name] = param_default
+      else:
+        self.params[param_name] = kwargs.pop(param_name)
+        if not isinstance(self.params[param_name], param_type):
+          msg = str(param_type.__name__)
+          if isinstance(param_type, tuple) and len(param_type) > 1:
+            msg = 'one of: %s' % ', '.join(param_type.__name__)
+          raise error.InvalidRule(
+              'While loading %s: Invalid type for %s. '
+              'Expected: %s. Actual: %s.' % (self.address, param_name, msg,
+                                             repr(self.params[param_name])))
+
+    if kwargs:  # There are leftover arguments.
+      raise error.InvalidRule(
+          '[%s]: Unknown argument(s): %s' % (self.address,
+                                             ', '.join(kwargs.keys())))
 
     if self.graphcontext is not None:
       self.graphcontext.add_node(self.address, target_obj=self)
       # TODO: process deps here?
 
-    # Input validators:
+    try:
+      self.validate_args()
+    except AssertionError as err:
+      raise error.InvalidRule('Error in %s: %s' % (self.address, err))
+
+  def validate_args(self):
+    """Input validation!"""
     def validate_name():
       allowed_re = '^[a-z](([a-z0-9_-]+)?([a-z0-9])?)?'
       assert isinstance(self.params['name'], basestring), (
@@ -190,20 +216,13 @@ class BaseTarget(object):
       assert re.match(allowed_re, self.params['name']), (
           'Invalid rule name: %s. Must match %s.' % (
               repr(self.params['name']), repr(allowed_re)))
-    self.input_validators.append(validate_name)
+    validate_name()
 
     def validate_deps():
       if 'deps' in self.params:
         assert type(self.params['deps']) in (type(None), list), (
             'Deps must be a list, not %s' % repr(self.params['deps']))
-    self.input_validators.append(validate_deps)
-    # End input validators
-
-    try:
-      for validator in self.input_validators:
-        validator()
-    except AssertionError as err:
-      raise error.InvalidRule('Error in %s: %s' % (self.address, err))
+    validate_deps()
 
   @property
   def output_files(self):

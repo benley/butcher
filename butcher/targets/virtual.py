@@ -21,8 +21,8 @@ class VirtualTarget(base.BaseTarget):
   rulebuilder = VirtualTargetBuilder
   ruletype = 'virtual'
 
-  required_params = ['name', 'deps']
-  optional_params = {}
+  required_params = [('name', str), ('deps', list)]
+  optional_params = []
 
   def __init__(self, **kwargs):
     base.BaseTarget.__init__(self, **kwargs)
