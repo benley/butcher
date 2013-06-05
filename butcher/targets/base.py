@@ -41,10 +41,11 @@ class BaseBuilder(object):
 
   def collect_deps(self):
     pass
-    # Holy crap, this whole function is unnecessary with the current design.
-    # A rule's dependencies are built before the rule (duh) and the outputs
+    # Holy crap, this whole function is unnecessary with the current design. A
+    # rule's dependencies are built before the rule (duh) and the outputs
     # thereof go into the same buildroot that this one uses, so the files will
-    # already be in place.
+    # already be in place. This will probably not always be the case though, so
+    # this ought to get implemented in an intelligent way.
 
     #if 'deps' not in self.rule.params:
     #  return
