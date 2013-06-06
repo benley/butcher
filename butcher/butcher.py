@@ -22,6 +22,7 @@ from cloudscaling.butcher import cache
 from cloudscaling.butcher import error
 from cloudscaling.butcher import gitrepo
 from cloudscaling.butcher import util
+from cloudscaling.butcher.targets import base
 
 app.add_option('--debug', action='store_true', dest='debug')
 app.add_option('--basedir', dest='butcher_basedir',
@@ -36,6 +37,8 @@ app.add_option('--buildfile_name', dest='buildfile_name',
                default='OCS_BUILD.data')
 app.add_option('--rebuild_all', action='store_true', dest='disable_cache_fetch',
                help='Disable cache fetching and explicitly build each target.')
+app.add_option('--nohardlinks', action='store_true', dest='disable_hardlinks',
+               help='Disable hardlinking of files in and out of the cache.')
 
 
 class Butcher(app.Module):
@@ -69,6 +72,8 @@ class Butcher(app.Module):
       os.makedirs(self.buildroot)
     if app.get_options().disable_cache_fetch:
       self.options['cache_fetch'] = False
+    if app.get_options().disable_hardlinks:
+      base.BaseBuilder.linkfiles = False
 
   def Clean(self):
     """Clear the contents of the build area."""

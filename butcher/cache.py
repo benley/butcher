@@ -44,8 +44,15 @@ class CacheManager(app.Module):
       rule: A targets.SomeBuildRule object
       metahash: hash object
     """
-    mhash = metahash.hexdigest()
-    return os.path.join(self.cache_dir, mhash, filename)
+    cpath = self._genpath(filename, metahash)
+    if os.path.exists(cpath):
+      return cpath
+    else:
+      raise CacheMiss
+
+  def _genpath(self, filename, mhash):
+    """Generate the path to a file in the cache, whether or not it exists."""
+    return os.path.join(self.cache_dir, mhash.hexdigest(), filename)
 
   def putfile(self, filepath, buildroot, metahash):
     """Put a file in the cache.
@@ -57,7 +64,7 @@ class CacheManager(app.Module):
       metahash: hash object
     """
     filepath_relative = filepath.split(buildroot)[1][1:]  # (Strip leading /)
-    incachepath = self.path_in_cache(filepath_relative, metahash)
+    incachepath = self._genpath(filepath_relative, metahash)
     log.debug('Cache: %s -> %s', filepath, incachepath)
     if not os.path.exists(os.path.dirname(incachepath)):
       os.makedirs(os.path.dirname(incachepath))
@@ -71,9 +78,10 @@ class CacheManager(app.Module):
       objpath: Filename relative to buildroot.
       metahash: hash object
     """
-    if os.path.exists(self.path_in_cache(objpath, metahash)):
+    try:
+      self.path_in_cache(objpath, metahash)
       return True
-    else:
+    except CacheMiss:
       return False
 
   def get_obj(self, objpath, metahash, dst_path):
@@ -87,12 +95,11 @@ class CacheManager(app.Module):
     Raises:
       CacheMiss: if the item is not in the cache
     """
-    mhash = metahash.hexdigest()
     incachepath = self.path_in_cache(objpath, metahash)
     if not os.path.exists(incachepath):
       raise CacheMiss('%s not in cache.' % incachepath)
     else:
-      log.debug('Cache hit! %s~%s', objpath, mhash)
+      log.debug('Cache hit! %s~%s', objpath, metahash.hexdigest())
       if not os.path.exists(os.path.dirname(dst_path)):
-        os.makedirs(dst_path)
+        os.makedirs(os.path.dirname(dst_path))
       shutil.copy2(incachepath, dst_path)

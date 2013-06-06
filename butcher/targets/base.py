@@ -13,12 +13,17 @@ from twitter.common import log
 class BaseBuilder(object):
   """Base class for rule self-builders."""
 
+  # If true, butcher will generally hard-link files from its cache into the
+  # build area rather than copying them.
+  linkfiles = True
+
   def __init__(self, buildroot, target_obj, source_dir):
     self.source_dir = source_dir    # Where the git repo is checked out
     self.rule = target_obj          # targets.something object
     self.address = target_obj.name  # Build address
     self.buildroot = buildroot
     self.cachemgr = cache.CacheManager()
+    self._cached_metahash = None
     if not os.path.exists(self.buildroot):
       os.makedirs(self.buildroot)
     # TODO: some rule types don't have srcs.
@@ -32,11 +37,11 @@ class BaseBuilder(object):
       dstpath = os.path.join(self.buildroot, self.address.repo,
                              self.address.path, src)
       dstdir = os.path.dirname(dstpath)
-      log.debug('[%s]: Collect srcs: %s -> %s', self.rule.address, srcpath,
-                dstpath)
       if not os.path.exists(dstdir):
         os.makedirs(dstdir)
-      shutil.copy2(srcpath, dstdir)
+      log.debug('[%s]: Collect srcs: %s -> %s', self.rule.address, srcpath,
+                dstpath)
+      self.linkorcopy(srcpath, dstpath)
       self.srcs_map[src] = dstpath
 
   def collect_deps(self):
@@ -70,18 +75,32 @@ class BaseBuilder(object):
     In theory, if this hash doesn't change, the outputs won't change either,
     which makes it useful for caching.
     """
+
+    # BE CAREFUL when overriding/extending this method. You want to copy the
+    # if(cached)/return(cached) part, then call this method, then at the end
+    # update the cached metahash. Just like this code, basically, only you call
+    # the method from the base class in the middle of it. If you get this wrong
+    # it could result in butcher not noticing changed inputs between runs,
+    # which could cause really nasty problems.
+
+    if self._cached_metahash:
+      return self._cached_metahash
+
+    # If you are extending this function in a subclass, here is where you do:
+    # BaseBuilder._metahash(self)
+
     log.debug('[%s]: Metahash input: %s', self.address, unicode(self.address))
     mhash = util.hash_str(unicode(self.address))
     for src in self.rule.source_files or []:
       log.debug('[%s]: Metahash input: %s', self.address, src)
-      mhash = util.hash_file(open(self.srcs_map[src], 'rb'), hasher=mhash)
+      mhash = util.hash_file(self.srcs_map[src], hasher=mhash)
     for dep in self.rule.composed_deps or []:
       dep_rule = self.rule.subgraph.node[dep]['target_obj']
       for item in dep_rule.output_files:
         log.debug('[%s]: Metahash input: %s', self.address, item)
         item_path = os.path.join(self.buildroot, item)
-        mhash = util.hash_file(open(item_path, 'rb'),
-                               hasher=mhash)
+        mhash = util.hash_file(item_path, hasher=mhash)
+    self._cached_metahash = mhash
     return mhash
 
   def collect_outs(self):
@@ -127,7 +146,25 @@ class BaseBuilder(object):
     """See if this rule has already been built and cached."""
     for item in self.rule.output_files:
       dstpath = os.path.join(self.buildroot, item)
-      self.cachemgr.get_obj(item, self._metahash(), dstpath)
+      self.linkorcopy(
+          self.cachemgr.path_in_cache(item, self._metahash()),
+          dstpath)
+      #self.cachemgr.get_obj(item, self._metahash(), dstpath)
+
+  def linkorcopy(self, src, dst):
+    if os.path.isdir(dst):
+      log.warn('linkorcopy given a directory as destination. Use caution.')
+      log.debug('src: %s  dst: %s', src, dst)
+    elif os.path.exists(dst):
+      os.unlink(dst)
+    elif not os.path.exists(os.path.dirname(dst)):
+      os.makedirs(os.path.dirname(dst))
+    if self.linkfiles:
+      log.debug('Linking: %s -> %s', src, dst)
+      os.link(src, dst)
+    else:
+      log.debug('Copying: %s -> %s', src, dst)
+      shutil.copy2(src, dst)
 
   def build(self):
     """Build the rule. Must be overridden by inheriting class."""

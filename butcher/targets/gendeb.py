@@ -7,6 +7,7 @@ from cloudscaling.butcher.targets import base
 from cloudscaling.butcher.targets import pkgfilegroup
 from cloudscaling.butcher.targets import pkg_symlink
 from cloudscaling.butcher import error
+from cloudscaling.butcher import util
 from twitter.common import app
 from twitter.common import log
 
@@ -53,12 +54,7 @@ class GenDebBuilder(base.BaseBuilder):
                 '--deb-priority', params['priority']])
     # Optional parameters:
     if params['extra_requires']:
-      def repeat_flag(seq, flag):
-        """repeat_flag([1, 2, 3], '-f') ==> ['-f', 1, '-f', 2, '-f', 3]"""
-        for item in iter(seq):
-          yield flag
-          yield item
-      cmd.extend(repeat_flag(self.rule.extra_requires, '--depends'))
+      cmd.extend(util.repeat_flag(self.rule.extra_requires, '--depends'))
     if params['postinst']:
       cmd.extend(['--after-install', params['postinst']])
     if params['postrm']:

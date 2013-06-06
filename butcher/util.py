@@ -1,4 +1,4 @@
-"""Misc utility functions."""
+"""Miscellaneous utility functions."""
 
 import hashlib
 import os
@@ -20,7 +20,18 @@ def user_homedir(username=None):
         'This function is bollocks and its author should most likely be sacked')
 
 
-def hash_file(fileobj, hasher=None, blocksize=65536):
+def hash_file(filename, hasher=None, blocksize=65536):
+  """Checksum a file, optionally updating an existing hash.
+
+  Args:
+    filename: Path to the file.
+    hasher: Hash object such as hashlib.sha1(). Defaults to sha1.
+    blocksize: Read from the file this many bytes at a time.
+  """
+  return hash_stream(open(filename, 'rb'), hasher, blocksize)
+
+
+def hash_stream(fileobj, hasher=None, blocksize=65536):
   """Read from fileobj stream, return hash of its contents.
 
   Args:
@@ -35,8 +46,23 @@ def hash_file(fileobj, hasher=None, blocksize=65536):
     buf = fileobj.read(blocksize)
   return hasher
 
+
 def hash_str(data, hasher=None):
   """Checksum hash a string."""
   hasher = hasher or hashlib.sha1()
   hasher.update(data)
   return hasher
+
+
+def repeat_flag(seq, flag):
+  """Intersperse flag as a predecessor to each element of seq.
+
+  Example:
+  seq = ['foo', 'bar', 'bas']
+  flag = '--word'
+  print repeat_flag(seq, flag)
+    ==>  ['--word', 'foo', '--word', 'bar', '--word', 'bas']
+  """
+  for item in iter(seq):
+    yield flag
+    yield item

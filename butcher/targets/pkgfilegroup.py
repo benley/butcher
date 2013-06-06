@@ -1,18 +1,18 @@
 """pkgfilegroup targets
 
-ONLY PARTIALLY IMPLEMENTED!
+Mostly implemented. Remaining functionality may be left to consumers of this
+rule.
 
 Works so far:
   - collects output files from rules given in srcs, emits them as its own
     outputs
+  - Applies strip_prefix, puts files in the prefixed directory structure.
 
 Not yet implemented:
   - set attributes
-  - put output files in the prefixed directory (should this happen here?)
 """
 
 import os
-import shutil
 from cloudscaling.butcher import address
 from cloudscaling.butcher.targets import base
 
@@ -31,7 +31,7 @@ class PkgFileGroupBuilder(base.BaseBuilder):
         output_dstdir = os.path.dirname(output_dst)
         if not os.path.exists(output_dstdir):
           os.makedirs(output_dstdir)
-        shutil.copy2(src, output_dstdir)
+        self.linkorcopy(src, output_dst)
         #TODO: attrs
 
 
@@ -62,7 +62,10 @@ class PkgFileGroup(base.BaseTarget):
   def output_files(self):
     """Returns the list of output files from this rule.
 
-    Paths are given relative to buildroot.
+    Paths are generated from the outputs of this rule's dependencies, with
+    their paths translated based on prefix and strip_prefix.
+
+    Returned paths are relative to buildroot.
     """
     for dep in self.subgraph.successors(self.address):
       dep_rule = self.subgraph.node[dep]['target_obj']
