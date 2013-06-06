@@ -3,6 +3,8 @@
 import os
 import re
 import socket
+import subprocess
+import sys
 from cloudscaling.butcher.targets import base
 from cloudscaling.butcher.targets import pkgfilegroup
 from cloudscaling.butcher.targets import pkg_symlink
@@ -18,6 +20,14 @@ class GenDebBuilder(base.BaseBuilder):
   """Builder for gendeb rules"""
 
   fpm_bin = app.get_options().fpm_bin or 'fpm'
+
+  def __init__(self, buildroot, target_obj, source_dir):
+    base.BaseBuilder.__init__(self, buildroot, target_obj, source_dir)
+    self.workdir = os.path.join(
+        self.buildroot, self.address.repo, self.address.path, '__GENDEB.%s' %
+        self.address.target)
+    self.deb_fsroot = os.path.join(self.workdir, 'root')
+    self.deb_filelist = []
 
   def prep(self):
     # Due to possibly-unwise cleverness in __init__.py, pylint thinks
@@ -35,22 +45,25 @@ class GenDebBuilder(base.BaseBuilder):
 
   def build(self):
     params = self.rule.params
-    deb_filename = self.rule.output_files[0]
+    # TODO: Ugh, why didn't I make output_files relative to the rule's path?
+    deb_filename = self.rule.output_files[0].split(
+        os.path.join(self.address.repo, self.address.path), 1)[-1]
     maintainer = params['packager'] or '<%s@%s>' % (os.getlogin(),
                                                     socket.gethostname())
     # The required args:
-    cmd = [self.fpm_bin,
+    cmd = [self.fpm_bin, '-f',
            '-t', 'deb',
+           '-s', 'dir',
            '--package', deb_filename,
            '--name', params['package_name'],
            '--version', params['version'],
            '--iteration', params['release'],
-           '--description', params['long_description']]
+           '--description', '\n'.join(params['long_description'])]
     # Optional things that have default values:
     cmd.extend(['--maintainer', maintainer,
                 '--epoch', params['epoch'],
                 '--category', params['section'],
-                '--arch', params['arch'],
+                '--architecture', params['arch'],
                 '--deb-priority', params['priority']])
     # Optional parameters:
     if params['extra_requires']:
@@ -67,11 +80,43 @@ class GenDebBuilder(base.BaseBuilder):
       for field, val in params['extra_control_fields']:
         cmd.extend(['--deb-field', '%s: %s' % (field, val)])
 
+    if self.deb_filelist:
+      inputs_file = os.path.join(self.workdir, '__inputs')
+      with open(inputs_file, 'w') as ifh:
+        ifh.write('\n'.join(self.deb_filelist))
+        ifh.write('\n')
+      cmd.extend(['-C', self.deb_fsroot,
+                  '--inputs', inputs_file])
+
+    # string out those pesky integers
+    cmd = [ str(x) for x in cmd ]
+
     log.debug('Generated fpm command: %s', cmd)
     log.warn('gendeb is only partially implemented. Expect failure.')
+    ruledir = os.path.join(self.buildroot, self.address.repo,
+                           self.address.path)
+    fpm = subprocess.Popen(cmd, stdout=sys.stdout, stderr=sys.stderr,
+                           cwd=ruledir)
+    fpm.wait()
+
 
   #def collect_srcs(self):
   #  pass
+
+  def collect_deps(self):
+    deb_filelist = []
+    for grouptgt in self.rule.composed_deps or []:
+      # TODO: I'm tired of this nested dict silliness. Abstract it.
+      rule = self.rule.subgraph.node[grouptgt]['target_obj']
+      for item in rule.output_files:
+        item_base = item.lstrip('/').split(
+            os.path.join(rule.address.repo,
+                         rule.address.path), 1)[-1].lstrip('/')
+        deb_filelist.append(item_base)
+        self.linkorcopy(
+            os.path.join(self.buildroot, item),
+            os.path.join(self.deb_fsroot, item_base))
+    self.deb_filelist = deb_filelist
 
 
 class GenDeb(base.BaseTarget):
@@ -141,5 +186,7 @@ class GenDeb(base.BaseTarget):
 
   @property
   def output_files(self):
-    return [
-        '%(package_name)s_%(version)s-%(release)s_%(arch)s.deb' % self.params]
+
+    return [os.path.join(
+        self.address.repo, self.address.path,
+        '%(package_name)s_%(version)s-%(release)s_%(arch)s.deb' % self.params)]
