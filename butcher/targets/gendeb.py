@@ -28,6 +28,7 @@ class GenDebBuilder(base.BaseBuilder):
         self.address.target)
     self.deb_fsroot = os.path.join(self.workdir, 'root')
     self.deb_filelist = []
+    self.config_files = []
 
   def prep(self):
     # Due to possibly-unwise cleverness in __init__.py, pylint thinks
@@ -80,6 +81,9 @@ class GenDebBuilder(base.BaseBuilder):
       for field, val in params['extra_control_fields']:
         cmd.extend(['--deb-field', '%s: %s' % (field, val)])
 
+    if self.config_files:
+      cmd.extend(util.repeat_flag(self.config_files, '--config-files'))
+
     if self.deb_filelist:
       inputs_file = os.path.join(self.workdir, '__inputs')
       with open(inputs_file, 'w') as ifh:
@@ -113,6 +117,8 @@ class GenDebBuilder(base.BaseBuilder):
             os.path.join(rule.address.repo,
                          rule.address.path), 1)[-1].lstrip('/')
         deb_filelist.append(item_base)
+        if rule.params['section'] == 'config':
+          self.config_files.append(item_base)
         self.linkorcopy(
             os.path.join(self.buildroot, item),
             os.path.join(self.deb_fsroot, item_base))
