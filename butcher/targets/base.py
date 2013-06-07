@@ -54,7 +54,7 @@ class BaseBuilder(object):
 
     #if 'deps' not in self.rule.params:
     #  return
-    #for dep in self.rule.composed_deps or []:
+    #for dep in self.rule.composed_deps() or []:
     #  dep_rule = self.rule.subgraph.node[dep]['target_obj']
     #  for item in dep_rule.output_files:
     #   srcpath = os.path.join(self.buildroot, item)
@@ -97,7 +97,7 @@ class BaseBuilder(object):
       log.debug('[%s]: Metahash input: %s', self.address, src)
       mhash = util.hash_str(src, hasher=mhash)
       mhash = util.hash_file(self.srcs_map[src], hasher=mhash)
-    for dep in self.rule.composed_deps or []:
+    for dep in self.rule.composed_deps() or []:
       dep_rule = self.rule.subgraph.node[dep]['target_obj']
       for item in dep_rule.output_files:
         log.debug('[%s]: Metahash input: %s', self.address, item)
@@ -173,6 +173,10 @@ class BaseBuilder(object):
   def build(self):
     """Build the rule. Must be overridden by inheriting class."""
     raise NotImplementedError(self.rule.address)
+
+  def rulefor(self, addr):
+    """Return the rule object for an address from our deps graph."""
+    return self.rule.subgraph.node[self.rule.makeaddress(addr)]['target_obj']
 
 
 class BaseTarget(object):
@@ -276,7 +280,6 @@ class BaseTarget(object):
     raise NotImplementedError(
         '[%s]: Implementation is incomplete.' % self.address)
 
-  @property
   def composed_deps(self):
     """Dependencies of this build target."""
     if 'deps' in self.params:
@@ -294,3 +297,15 @@ class BaseTarget(object):
     """This rule's source files."""
     if 'srcs' in self.params:
       return self.params['srcs']
+
+  def makeaddress(self, label):
+    """Turn a label into an Address with current context.
+
+    Adds repo and path if given a label that only has a :target part.
+    """
+    addr = address.new(label)
+    if not addr.repo:
+      addr.repo = self.address.repo
+      if not addr.path:
+        addr.path = self.address.path
+    return addr

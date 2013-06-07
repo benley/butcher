@@ -22,7 +22,7 @@ class PkgFileGroupBuilder(base.BaseBuilder):
   ruletype = 'pkgfilegroup'
 
   def build(self):
-    for dep in self.rule.composed_deps:
+    for dep in self.rule.composed_deps():
       dep_rule = self.rule.subgraph.node[dep]['target_obj']
       for dep_file in dep_rule.output_files:
         src = os.path.join(self.buildroot, dep_file)
@@ -73,7 +73,6 @@ class PkgFileGroup(base.BaseTarget):
         out = self.translate_path(dep_file, dep_rule).lstrip('/')
         yield out
 
-  @property
   def composed_deps(self):
     for dep in self.params['srcs']:
       dep_addr = address.new(dep)

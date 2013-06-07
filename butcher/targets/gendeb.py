@@ -6,8 +6,10 @@ import socket
 import subprocess
 import sys
 from cloudscaling.butcher.targets import base
+from cloudscaling.butcher.targets import filegroup
 from cloudscaling.butcher.targets import pkgfilegroup
 from cloudscaling.butcher.targets import pkg_symlink
+from cloudscaling.butcher import address
 from cloudscaling.butcher import error
 from cloudscaling.butcher import util
 from twitter.common import app
@@ -27,7 +29,9 @@ class GenDebBuilder(base.BaseBuilder):
         self.buildroot, self.address.repo, self.address.path, '__GENDEB.%s' %
         self.address.target)
     self.deb_fsroot = os.path.join(self.workdir, 'root')
+    self.deb_controlroot = os.path.join(self.workdir, 'DEBIAN')
     self.deb_filelist = []
+    self.controlfiles = []
     self.config_files = []
 
   def prep(self):
@@ -35,13 +39,17 @@ class GenDebBuilder(base.BaseBuilder):
     # pkgfilegroup and pkg_symlink are classes here, but it is wrong. They are
     # modules.
     allowed_deps = (pkgfilegroup.PkgFileGroup, pkg_symlink.PkgSymlink)
-    for dep in self.rule.composed_deps:
+    for dep in self.rule.composed_deps():
       deprule = self.rule.subgraph.node[dep]['target_obj']
       if not isinstance(deprule, allowed_deps):
-        raise error.InvalidRule(
-            'In %s: gendeb rules can only depend on pkgfilegroup '
-            'and/or pkg_symlink targets. Was given %s, which is a %s' % (
-                self.address, repr(dep), type(deprule).__name__))
+        if isinstance(deprule, filegroup.FileGroup) and (
+            deprule.address in self.rule.allowed_filegroup_targets):
+          pass
+        else:
+          raise error.InvalidRule(
+              'In %s: gendeb rules can only depend on pkgfilegroup '
+              'and/or pkg_symlink targets. Was given %s, which is a %s' % (
+                  self.address, repr(dep), type(deprule).__name__))
     base.BaseBuilder.prep(self)
 
   def build(self):
@@ -69,14 +77,18 @@ class GenDebBuilder(base.BaseBuilder):
     # Optional parameters:
     if params['extra_requires']:
       cmd.extend(util.repeat_flag(self.rule.extra_requires, '--depends'))
+
+    def maintainer_script(script):
+      return self.rulefor(params[script]).source_files[0]
+
     if params['postinst']:
-      cmd.extend(['--after-install', params['postinst']])
+      cmd.extend(['--after-install', maintainer_script('postinst')])
     if params['postrm']:
-      cmd.extend(['--after-remote', params['postrm']])
+      cmd.extend(['--after-remove', maintainer_script('postrm')])
     if params['preinst']:
-      cmd.extend(['--before-install', params['preinst']])
+      cmd.extend(['--before-install', maintainer_script('preinst')])
     if params['prerm']:
-      cmd.extend(['--before-remove', params['prerm']])
+      cmd.extend(['--before-remove', maintainer_script('prerm')])
     if params['extra_control_fields']:
       for field, val in params['extra_control_fields']:
         cmd.extend(['--deb-field', '%s: %s' % (field, val)])
@@ -109,19 +121,22 @@ class GenDebBuilder(base.BaseBuilder):
 
   def collect_deps(self):
     deb_filelist = []
-    for grouptgt in self.rule.composed_deps or []:
-      # TODO: I'm tired of this nested dict silliness. Abstract it.
-      rule = self.rule.subgraph.node[grouptgt]['target_obj']
+    for tgt in self.rule.composed_deps() or []:
+      rule = self.rulefor(tgt)
       for item in rule.output_files:
         item_base = item.lstrip('/').split(
             os.path.join(rule.address.repo,
                          rule.address.path), 1)[-1].lstrip('/')
-        deb_filelist.append(item_base)
-        if rule.params['section'] == 'config':
-          self.config_files.append(item_base)
-        self.linkorcopy(
-            os.path.join(self.buildroot, item),
-            os.path.join(self.deb_fsroot, item_base))
+        # Maintainer scripts and such don't need to be copied into the tree:
+        # (they'll be picked up from their location in situ)
+        if rule.address not in self.rule.control_deps:
+          deb_filelist.append(item_base)
+          if 'section' in rule.params and rule.params['section'] == 'config':
+            self.config_files.append(item_base)
+          dst = self.deb_fsroot
+          self.linkorcopy(
+              os.path.join(self.buildroot, item),
+              os.path.join(dst, item_base))
     self.deb_filelist = deb_filelist
 
 
@@ -164,6 +179,10 @@ class GenDeb(base.BaseTarget):
     base.BaseTarget.__init__(self, **kwargs)
     if not self.params['package_name']:
       self.params['package_name'] = self.params['name']
+    # Exceptions to the "only pkgfilegroup or pkg_symlink" restriction so
+    # preinst/postinst/prerm/postrm dependencies work:
+    self.allowed_filegroup_targets = set()
+    self.control_deps = set()
 
   def validate_args(self):
     """Input validators for this rule type."""
@@ -190,9 +209,18 @@ class GenDeb(base.BaseTarget):
             params['package_name'], pkgname_re))
     # TODO: more of this.
 
+  def composed_deps(self):
+    deps = []
+    for dep in ['preinst', 'postinst', 'prerm', 'postrm']:
+      if self.params[dep]:
+        dep_addr = self.makeaddress(self.params[dep])
+        deps.append(dep_addr)
+        self.control_deps.add(dep_addr)
+        self.allowed_filegroup_targets.add(dep_addr)
+    return deps + base.BaseTarget.composed_deps(self)
+
   @property
   def output_files(self):
-
     return [os.path.join(
         self.address.repo, self.address.path,
         '%(package_name)s_%(version)s-%(release)s_%(arch)s.deb' % self.params)]
