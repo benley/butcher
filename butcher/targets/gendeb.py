@@ -59,6 +59,7 @@ class GenDebBuilder(base.BaseBuilder):
         os.path.join(self.address.repo, self.address.path), 1)[-1]
     maintainer = params['packager'] or '<%s@%s>' % (os.getlogin(),
                                                     socket.gethostname())
+    fpm_description = [params['short_description']] + params['long_description']
     # The required args:
     cmd = [self.fpm_bin, '-f',
            '-t', 'deb',
@@ -67,16 +68,20 @@ class GenDebBuilder(base.BaseBuilder):
            '--name', params['package_name'],
            '--version', params['version'],
            '--iteration', params['release'],
-           '--description', '\n'.join(params['long_description'])]
+           '--description', '\n'.join(fpm_description)]
     # Optional things that have default values:
-    cmd.extend(['--maintainer', maintainer,
-                '--epoch', params['epoch'],
-                '--category', params['section'],
-                '--architecture', params['arch'],
-                '--deb-priority', params['priority']])
+    cmd.extend([
+        '--maintainer', maintainer,
+        '--epoch', params['epoch'],
+        '--category', params['section'],
+        '--architecture', params['arch'],
+        '--deb-priority', params['priority'],
+        ])
     # Optional parameters:
     if params['extra_requires']:
       cmd.extend(util.repeat_flag(self.rule.extra_requires, '--depends'))
+    if params['homepage']:
+      cmd.extend(['--url', params['homepage']])
 
     def maintainer_script(script):
       return self.rulefor(params[script]).source_files[0]
@@ -108,7 +113,6 @@ class GenDebBuilder(base.BaseBuilder):
     cmd = [ str(x) for x in cmd ]
 
     log.debug('Generated fpm command: %s', cmd)
-    log.warn('gendeb is only partially implemented. Expect failure.')
     ruledir = os.path.join(self.buildroot, self.address.repo,
                            self.address.path)
     fpm = subprocess.Popen(cmd, stdout=sys.stdout, stderr=sys.stderr,
@@ -161,6 +165,7 @@ class GenDeb(base.BaseTarget):
       ('epoch', (str, int), 0),
       ('extra_control_fields', list, None),
       ('extra_requires', list, None),
+      ('homepage', str, None),
       ('packager', str, None),
       ('package_name', str, None),
       ('priority', str, 'extra'),
@@ -188,13 +193,6 @@ class GenDeb(base.BaseTarget):
     """Input validators for this rule type."""
     base.BaseTarget.validate_args(self)
     params = self.params
-    if params['deps'] is not None:
-      assert isinstance(params['deps'], list), (
-          'deps must be a list, not %s' % type(params['deps']))
-    if params['extra_requires'] is not None:
-      assert isinstance(params['extra_requires'], list), (
-          'extra_requires must be a list of strings, not %s' % type(
-              params['extra_requires']))
     if params['extra_control_fields'] is not None:
       assert isinstance(params['extra_control_fields'], list), (
           'extra_control_fields must be a list of tuples, not %s' % type(
