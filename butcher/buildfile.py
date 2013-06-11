@@ -1,6 +1,17 @@
-"""BUILD file module.
+"""Parse and handle BUILD files.
 
-We're using OCS_BUILD.data in place of BUILD for now.
+Each BUILD file is parsed into an acyclic digraph with each node representing
+one build rule.
+
+Two file formats are currently supported:
+  1. JSON
+  2. native Python
+
+The latter is preferred and will be better supported as butcher gains features.
+There are already a number of features and patterns that aren't easily
+expressed in the JSON format, such as file globbing, variable substitution,
+list comprehensions to format parameters, and custom functions for rule
+generation.
 """
 
 import json

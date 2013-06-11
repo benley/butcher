@@ -34,7 +34,7 @@ app.add_option('--build_root', dest='build_root',
                      'butcher basedir.'))
 app.add_option('--buildfile_name', dest='buildfile_name',
                help='Filename to use as BUILD files in each directory.',
-               default='OCS_BUILD.data')
+               default='BUILD')
 app.add_option('--rebuild_all', action='store_true', dest='disable_cache_fetch',
                help='Disable cache fetching and explicitly build each target.')
 app.add_option('--nohardlinks', action='store_true', dest='disable_hardlinks',
