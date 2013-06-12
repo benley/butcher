@@ -79,7 +79,7 @@ class GenDebBuilder(base.BaseBuilder):
         ])
     # Optional parameters:
     if params['extra_requires']:
-      cmd.extend(util.repeat_flag(self.rule.extra_requires, '--depends'))
+      cmd.extend(util.repeat_flag(params['extra_requires'], '--depends'))
     if params['homepage']:
       cmd.extend(['--url', params['homepage']])
 
