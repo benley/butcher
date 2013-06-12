@@ -4,6 +4,7 @@ import os
 import shutil
 from cloudscaling.butcher import gitrepo
 from cloudscaling.butcher import error
+from cloudscaling.butcher import util
 from twitter.common import app
 from twitter.common import log
 
@@ -22,6 +23,8 @@ class CacheManager(app.Module):
   def __init__(self):
     app.Module.__init__(self, label='butcher.cachemanager',
                         description='Butcher cache manager')
+    self.obj_cachedir = None
+    self.mh_cachedir = None
 
   def setup_function(self):
     if not self.cache_dir:
@@ -30,12 +33,15 @@ class CacheManager(app.Module):
         self.cache_dir = opts.object_cache_dir
       else:
         self.cache_dir = os.path.join(opts.butcher_basedir, 'cache')
-      log.info('Cache initialized at %s', self.cache_dir)
-    if not os.path.exists(self.cache_dir):
-      os.makedirs(self.cache_dir)
+    self.obj_cachedir = os.path.join(self.cache_dir, 'obj')
+    self.mh_cachedir = os.path.join(self.cache_dir, 'mh')
+    for subdir in (self.obj_cachedir, self.mh_cachedir):
+      if not os.path.exists(subdir):
+        os.makedirs(subdir)
+    log.info('Cache initialized at %s', self.cache_dir)
 
   def path_in_cache(self, filename, metahash):
-    """Generates the path to a file in the cache.
+    """Generates the path to a file in the mh cache.
 
     The generated path does not imply the file's existence!
 
@@ -52,7 +58,9 @@ class CacheManager(app.Module):
 
   def _genpath(self, filename, mhash):
     """Generate the path to a file in the cache, whether or not it exists."""
-    return os.path.join(self.cache_dir, mhash.hexdigest(), filename)
+    mhash = mhash.hexdigest()
+    return os.path.join(self.mh_cachedir, mhash[0:2], mhash[2:4],
+                        mhash, filename)
 
   def putfile(self, filepath, buildroot, metahash):
     """Put a file in the cache.
@@ -63,13 +71,42 @@ class CacheManager(app.Module):
       buildrule: The rule that generated this file.
       metahash: hash object
     """
+    def gen_obj_path(filename):
+      filehash = util.hash_file(filepath).hexdigest()
+      return filehash, os.path.join(self.obj_cachedir, filehash[0:2],
+                                    filehash[2:4], filehash)
+
     filepath_relative = filepath.split(buildroot)[1][1:]  # (Strip leading /)
+    # Path for the metahashed reference:
     incachepath = self._genpath(filepath_relative, metahash)
-    log.debug('Cache: %s -> %s', filepath, incachepath)
-    if not os.path.exists(os.path.dirname(incachepath)):
-      os.makedirs(os.path.dirname(incachepath))
-    shutil.copy2(filepath, incachepath)
-    log.debug('Added to cache: %s', incachepath)
+
+    filehash, obj_path = gen_obj_path(filepath)
+    if not os.path.exists(obj_path):
+      obj_dir = os.path.dirname(obj_path)
+      if not os.path.exists(obj_dir):
+        os.makedirs(obj_dir)
+      log.debug('Adding to obj cache: %s -> %s', filepath, obj_path)
+      os.link(filepath, obj_path)
+
+    if os.path.exists(incachepath):
+      existingfile_hash = util.hash_file(incachepath).hexdigest()
+      if filehash != existingfile_hash:
+        log.warn('File found in mh cache, but checksum differs. Replacing with '
+                 'this new version. (File: %s)', filepath)
+        log.warn('Possible reasons for this:')
+        log.warn(' 1. This build is not hermetic, and something differs about '
+                 'the build environment compared to the previous build.')
+        log.warn(' 2. This file has a timestamp or other build-time related '
+                 'data encoded into it, which will always cause the checksum '
+                 'to differ when built.')
+        log.warn(' 3. Everything is terrible and nothing works.')
+        os.unlink(incachepath)
+
+    if not os.path.exists(incachepath):
+      log.debug('Adding to mh cache: %s -> %s', filepath, incachepath)
+      if not os.path.exists(os.path.dirname(incachepath)):
+        os.makedirs(os.path.dirname(incachepath))
+      os.link(obj_path, incachepath)
 
   def in_cache(self, objpath, metahash):
     """Returns true if object is cached.
@@ -102,4 +139,5 @@ class CacheManager(app.Module):
       log.debug('Cache hit! %s~%s', objpath, metahash.hexdigest())
       if not os.path.exists(os.path.dirname(dst_path)):
         os.makedirs(os.path.dirname(dst_path))
-      shutil.copy2(incachepath, dst_path)
+      os.link(incachepath, dst_path)
+      #shutil.copy2(incachepath, dst_path)
