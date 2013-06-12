@@ -1,20 +1,19 @@
-# vi:ft=python
+# This is a pants BUILD file, not a Butcher one.
+# vi:ft=conf
 
 python_binary(
     name = 'graphtest',
     source = 'graphtest.py',
     dependencies = [
         pants(':butcher_lib'),
-        ]
-    )
+        ])
 
 python_binary(
     name = 'butcher',
     source = 'butcher.py',
     dependencies = [
         pants(':butcher_lib'),
-        ]
-    )
+        ])
 
 python_library(
     name = 'butcher_lib',
@@ -33,8 +32,7 @@ python_library(
         pants('src/python/cloudscaling/butcher/targets'),
         pants('src/python/twitter/common/app'),
         pants('src/python/twitter/common/log'),
-        ]
-    )
+        ])
 
 python_library(
     name = 'graph',
@@ -42,10 +40,9 @@ python_library(
     dependencies = [
         pants('src/python/twitter/common/app'),
         pants('src/python/twitter/common/util'),
-        pants('3rdparty/python:matplotlib'),
-        pants('3rdparty/python:networkx'),
-        ]
-    )
+        pants('src/python/cloudscaling/third_party:matplotlib'),
+        pants('src/python/cloudscaling/third_party:networkx'),
+        ])
 
 python_library(
     name = 'gitrepo',
@@ -54,5 +51,4 @@ python_library(
         python_requirement('GitPython'),
         pants('src/python/twitter/common/app'),
         pants('src/python/twitter/common/log'),
-        ]
-    )
+        ])

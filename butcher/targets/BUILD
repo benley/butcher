@@ -1,3 +1,6 @@
+# This is a pants BUILD file, not a Butcher one.
+# vi:ft=conf
+#
 python_library(
     name='targets',
     sources = [
@@ -13,6 +16,6 @@ python_library(
         ],
     dependencies = [
         pants('src/python/cloudscaling/butcher:gitrepo'),
-        pants('3rdparty/python:networkx'),
+        pants('src/python/cloudscaling/third_party:networkx'),
         ],
     )
