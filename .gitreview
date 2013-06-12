@@ -1,0 +1,5 @@
+[gerrit]
+host=pd.cloudscaling.com
+port=29418
+project=butcher.git
+defaultbranch=develop
