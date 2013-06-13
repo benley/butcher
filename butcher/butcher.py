@@ -291,6 +291,7 @@ def build(args):
     log.fatal(err)
     log.fatal('Error list:')
     [ log.fatal('  [%s]: %s', e.node, e) for e in bb.failure_log ]
+    app.quit(1)
 
 
 @app.command
