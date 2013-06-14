@@ -18,21 +18,45 @@ python_binary(
 python_library(
     name = 'butcher_lib',
     sources = [
-        'address.py',
         'buildfile.py',
         'butcher.py',
-        'cache.py',
         'buildfile_context.py',
-        'error.py',
-        'util.py',
+        'target_context/__init__.py',
         ],
     dependencies = [
+        pants(':address'),
+        pants(':cache'),
+        pants(':error'),
         pants(':graph'),
         pants(':gitrepo'),
+        pants(':util'),
         pants('src/python/cloudscaling/butcher/targets'),
         pants('src/python/twitter/common/app'),
         pants('src/python/twitter/common/log'),
         ])
+
+python_library(
+    name = 'address',
+    sources = 'address.py',
+    dependencies = [
+        pants(':error'),
+        ]
+    )
+
+python_library(
+    name = 'cache',
+    sources = 'cache.py',
+    dependencies = [
+        pants(':gitrepo'),
+        pants(':error'),
+        pants(':util'),
+        ]
+    )
+
+python_library(
+    name = 'error',
+    sources = 'error.py',
+    )
 
 python_library(
     name = 'graph',
@@ -52,3 +76,9 @@ python_library(
         pants('src/python/twitter/common/app'),
         pants('src/python/twitter/common/log'),
         ])
+
+python_library(
+    name = 'util',
+    sources = 'util.py',
+    )
+

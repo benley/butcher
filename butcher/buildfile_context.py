@@ -28,7 +28,7 @@ class ParseContext(object):
   _active = collections.deque([])
   _parsed = set()
   _strs_to_exec = [
-      'from cloudscaling.butcher.targets import *',
+      'from cloudscaling.butcher.target_context import *',
       'from glob import glob',
       ]
 

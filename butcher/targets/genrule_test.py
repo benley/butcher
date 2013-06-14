@@ -1,0 +1,56 @@
+"""Unit tests for genrules."""
+import re
+import unittest
+
+from cloudscaling.butcher.targets import genrule
+#from twitter.common import app
+#from twitter.common import log
+
+class TestGenrule(unittest.TestCase):
+
+  def setUp(self):
+    pass
+
+  def tearDown(self):
+    pass
+
+  def test_regexes(self):
+    """Verifies that those obnoxious regexes do what they're meant to."""
+    rdata = {
+        'paren_tag': [
+            ('   $(fancystuff inside.blabla)', 'fancystuff inside.blabla'),
+            ('asdf$(foobarbas)asdf', 'foobarbas'),
+            ('$( location //foo/bar:bla  )', ' location //foo/bar:bla  '),
+            ('$(@D)', '@D'),
+            ('$(@)', '@'),
+            ],
+        'noparen_tag': [
+            ('$@', '@'),
+            (' $@ ', '@'),
+            ('$@Dfoo', '@Dfoo'),
+            (' $@D ', '@D'),
+            ('foo$bar_foo%guh bla', 'bar_foo'),
+            (' $$blarg', None),
+            ],
+        }
+    for regex in rdata:
+      for (instr, outstr) in rdata[regex]:
+        if outstr:
+          expected_output = [outstr]
+        else:
+          expected_output = []
+        real_re = genrule.FANCY_REGEXES[regex]
+        match = re.findall(real_re, instr)
+        self.assertEqual(
+            expected_output, match,
+            'Regex name: %s\n'
+            'Regex: %s\n'
+            'Input: %s\n'
+            'Expected output: %s\n'
+            'Actual output: %s' % (regex, repr(real_re.pattern), repr(instr),
+                                   expected_output, match))
+
+
+if __name__ == '__main__':
+  suite = unittest.TestLoader().loadTestsFromTestCase(TestGenrule)
+  unittest.TextTestRunner(verbosity=2).run(suite)

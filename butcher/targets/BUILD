@@ -15,7 +15,17 @@ python_library(
         'virtual.py',
         ],
     dependencies = [
+        pants('src/python/cloudscaling/butcher:address'),
+        pants('src/python/cloudscaling/butcher:cache'),
+        pants('src/python/cloudscaling/butcher:error'),
         pants('src/python/cloudscaling/butcher:gitrepo'),
         pants('src/python/cloudscaling/third_party:networkx'),
         ],
+    )
+
+# TODO: make this a python_test target
+python_binary(
+    name='genrule_test',
+    source = 'genrule_test.py',
+    dependencies = [pants(':targets')],
     )
