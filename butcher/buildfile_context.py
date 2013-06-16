@@ -27,9 +27,9 @@ class ParseContext(object):
   """Manage context for parsing/loading BUILD files."""
   _active = collections.deque([])
   _parsed = set()
+  # These strings get executed inside each buildfile context to initialize it:
   _strs_to_exec = [
       'from cloudscaling.butcher.target_context import *',
-      'from glob import glob',
       ]
 
   @staticmethod

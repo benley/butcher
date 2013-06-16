@@ -18,6 +18,8 @@ FANCY_REGEXES = {
 class GenRuleBuilder(base.BaseBuilder):
   """Build a genrule."""
 
+  shell_bin = '/bin/bash'
+
   def __init__(self, buildroot, target_obj, source_dir):
     base.BaseBuilder.__init__(self, buildroot, target_obj, source_dir)
     self.cmd = self.rule.params['cmd']
@@ -26,10 +28,9 @@ class GenRuleBuilder(base.BaseBuilder):
                                           self.rule.address.path)
 
   def build(self):
-    shellcmd = 'BUILDROOT="%s"; RULEDIR="%s"; %s' % (
-        self.buildroot, self.path_to_this_rule, self.cmd)
-    log.debug('[%s]: Running in a shell:\n  %s', self.rule.name, shellcmd)
-    proc = subprocess.Popen(shellcmd, shell=True, cwd=self.path_to_this_rule,
+    log.debug('[%s]: Running in a shell:\n  %s', self.rule.name, self.cmd)
+    cmd = [self.shell_bin, '-c', self.cmd]
+    proc = subprocess.Popen(cmd, shell=False, cwd=self.path_to_this_rule,
                             stdout=sys.stdout, stderr=sys.stderr)
     returncode = proc.wait()
     if returncode != 0:
@@ -65,6 +66,7 @@ class GenRuleBuilder(base.BaseBuilder):
     $(SRCS)               Space-delimited list of this rule's source files.
     $(OUTS)               Space-delimited list of this rule's output files.
     $(@D)                 Full path to the output directory for this rule.
+    $@                    Path to the output file for this single-output rule.
     """
     cmd = self.cmd
 
@@ -97,11 +99,7 @@ class GenRuleBuilder(base.BaseBuilder):
           return os.path.join(self.buildroot, self.address.repo,
                               self.address.path, label)
         # Is it an address found in the deps of this rule?
-        addr = address.new(label)
-        if not addr.repo:
-          addr.repo = self.address.repo
-          if not addr.path:
-            addr.path = self.address.path
+        addr = self.rule.makeaddress(label)
         if addr not in self.rule.composed_deps():
           raise error.InvalidRule(
               '%s is referenced in cmd but is neither an output file from '
@@ -120,12 +118,12 @@ class GenRuleBuilder(base.BaseBuilder):
                 [os.path.join(self.buildroot, x) for x in paths])
 
       # Expand $(OUTS):
-      elif re.match(r'\s*OUTS\s*', tagstr):
+      elif re.match(r'OUTS', tagstr):
         return ' '.join(
             [os.path.join(self.buildroot, x) for x in self.rule.output_files])
 
       # Expand $(SRCS):
-      elif re.match(r'\s*SRCS\*', tagstr):
+      elif re.match(r'SRCS', tagstr):
         return ' '.join([
             os.path.join(self.path_to_this_rule, x)
             for x in self.rule.params['srcs'] or []
@@ -244,7 +242,7 @@ class GenRule(base.BaseTarget):
   required_params = [('name', str), ('cmd', str), ('outs', list)]
   optional_params = [('srcs', list, None),
                      ('deps', list, None),
-                     ('executable', bool, False)]
+                     ('executable', (int, bool), False)]
 
   def __init__(self, **kwargs):
     base.BaseTarget.__init__(self, **kwargs)

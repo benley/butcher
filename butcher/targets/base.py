@@ -284,10 +284,7 @@ class BaseTarget(object):
     """Dependencies of this build target."""
     if 'deps' in self.params:
       param_deps = self.params['deps'] or []
-      deps = [ address.new(dep) for dep in param_deps ]
-      for dep in deps:
-        if dep.repo is None:
-          dep.repo = self.address.repo
+      deps = [ self.makeaddress(dep) for dep in param_deps ]
       return deps
     else:
       return None

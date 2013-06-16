@@ -23,6 +23,7 @@ class TestGenrule(unittest.TestCase):
             ('$( location //foo/bar:bla  )', ' location //foo/bar:bla  '),
             ('$(@D)', '@D'),
             ('$(@)', '@'),
+            ('$(SRCS)', 'SRCS'),
             ],
         'noparen_tag': [
             ('$@', '@'),

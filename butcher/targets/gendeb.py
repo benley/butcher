@@ -54,9 +54,7 @@ class GenDebBuilder(base.BaseBuilder):
 
   def build(self):
     params = self.rule.params
-    # TODO: Ugh, why didn't I make output_files relative to the rule's path?
-    deb_filename = self.rule.output_files[0].split(
-        os.path.join(self.address.repo, self.address.path), 1)[-1]
+    deb_filename = os.path.basename(self.rule.output_files[0])
     maintainer = params['packager'] or '<%s@%s>' % (os.getlogin(),
                                                     socket.gethostname())
     fpm_description = [params['short_description']] + params['long_description']
@@ -80,6 +78,8 @@ class GenDebBuilder(base.BaseBuilder):
     # Optional parameters:
     if params['extra_requires']:
       cmd.extend(util.repeat_flag(params['extra_requires'], '--depends'))
+    if params['conflicts']:
+      cmd.extend(util.repeat_flag(params['conflicts'], '--conflicts'))
     if params['homepage']:
       cmd.extend(['--url', params['homepage']])
 
@@ -159,6 +159,7 @@ class GenDeb(base.BaseTarget):
       ]
   optional_params = [
       ('arch', str, 'amd64'),
+      ('conflicts', list, None),
       ('deps', list, None),
       # Where does this go?
       #('distro', str, 'unstable'),

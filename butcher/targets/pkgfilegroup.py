@@ -75,11 +75,7 @@ class PkgFileGroup(base.BaseTarget):
 
   def composed_deps(self):
     for dep in self.params['srcs']:
-      dep_addr = address.new(dep)
-      if not dep_addr.repo:
-        dep_addr.repo = self.address.repo
-        if not dep_addr.path:
-          dep_addr.path = self.address.path
+      dep_addr = self.makeaddress(dep)
       yield dep_addr
 
   @property
