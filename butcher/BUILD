@@ -62,5 +62,6 @@ python_library(
 python_library(
     name = 'util',
     sources = 'util.py',
-    )
-
+    dependencies = [
+        pants('src/python/cloudscaling/third_party:glob2')
+        ])

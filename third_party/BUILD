@@ -15,3 +15,9 @@ python_library(
         python_requirement('numpy'),
         python_requirement('dateutils'),
         ])
+
+python_library(
+    name = 'glob2',
+    dependencies = [
+        python_requirement('glob2'),
+        ])

@@ -1,7 +1,7 @@
 """Miscellaneous utility functions."""
 
 import fnmatch
-import glob
+import glob2
 import hashlib
 import os
 
@@ -70,20 +70,12 @@ def repeat_flag(seq, flag):
     yield item
 
 
-def globs(*args):
+def glob(*args):
   """Returns list of paths matching one or more wildcard patterns."""
+  if len(args) is 1 and isinstance(args[0], list):
+    args = args[0]
   matches = []
   for pattern in args:
-    for item in glob.glob(pattern):
+    for item in glob2.glob(pattern):
       matches.append(item)
-  return matches
-
-
-def rglobs(*patterns):
-  """Returns a list of paths matching one or more recursive wildcard globs."""
-  matches = []
-  for pattern in patterns:
-    for root, _, filenames in os.walk(os.path.dirname(pattern) or os.curdir):
-      for filename in fnmatch.filter(filenames, pattern):
-        matches.append(os.path.join(root, filename))
   return matches
