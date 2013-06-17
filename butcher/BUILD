@@ -2,13 +2,6 @@
 # vi:ft=conf
 
 python_binary(
-    name = 'graphtest',
-    source = 'graphtest.py',
-    dependencies = [
-        pants(':butcher_lib'),
-        ])
-
-python_binary(
     name = 'butcher',
     source = 'butcher.py',
     dependencies = [
@@ -27,7 +20,6 @@ python_library(
         pants(':address'),
         pants(':cache'),
         pants(':error'),
-        pants(':graph'),
         pants(':gitrepo'),
         pants(':util'),
         pants('src/python/cloudscaling/butcher/targets'),
@@ -57,16 +49,6 @@ python_library(
     name = 'error',
     sources = 'error.py',
     )
-
-python_library(
-    name = 'graph',
-    sources = 'graph.py',
-    dependencies = [
-        pants('src/python/twitter/common/app'),
-        pants('src/python/twitter/common/util'),
-        pants('src/python/cloudscaling/third_party:matplotlib'),
-        pants('src/python/cloudscaling/third_party:networkx'),
-        ])
 
 python_library(
     name = 'gitrepo',
