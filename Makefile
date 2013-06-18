@@ -6,7 +6,7 @@
 # intent is to stop relying on pants at some point and have butcher be
 # self-hosting.
 
-VERSION=0.2.1
+VERSION=0.2.2
 DEB_ITERATION=1
 
 pants=../../../pants
@@ -20,6 +20,7 @@ butcher: butcher.pex
 	mkdir -p bin
 	cp ../../../dist/butcher.pex bin/butcher
 
+# TODO: after bootstrapping butcher, use it to build its own deb.
 deb: butcher
 	fpm -f -t deb -s dir --prefix /usr -n butcher -v $(VERSION) --iteration $(DEB_ITERATION) --depends git -a native --description "Butcher build system" --deb-user root --deb-group root --url "http://pd.cloudscaling.com/codereview/gitweb?p=butcher.git" bin
 

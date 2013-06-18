@@ -51,7 +51,7 @@ class RepoState(app.Module):
     if overrides:
       for line in overrides:
         (reponame, path) = line.split(':')
-        self.origin_overrides[reponame] = path
+        self.origin_overrides[reponame] = os.path.abspath(path)
     pins = app.get_options().pinned_repos
     for pin in (pins or []):
       ppin = address.new(pin)
