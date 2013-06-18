@@ -1,6 +1,7 @@
 """gendeb targets"""
 
 import os
+import pwd
 import re
 import socket
 import subprocess
@@ -9,19 +10,32 @@ from cloudscaling.butcher.targets import base
 from cloudscaling.butcher.targets import filegroup
 from cloudscaling.butcher.targets import pkgfilegroup
 from cloudscaling.butcher.targets import pkg_symlink
-from cloudscaling.butcher import address
 from cloudscaling.butcher import error
+from cloudscaling.butcher import rubygems
 from cloudscaling.butcher import util
 from twitter.common import app
 from twitter.common import log
 
-app.add_option('--fpm_bin', dest='fpm_bin', help='Path to the fpm utility.')
+#app.add_option('--fpm_bin', dest='fpm_bin', help='Path to the fpm utility.')
+
+
+class GenDebRequirements(app.Module):
+  def __init__(self):
+    app.Module.__init__(self, label=__name__,
+                        description='gendeb',
+                        dependencies='cloudscaling.butcher.rubygems')
+
+  def setup_function(self):
+    if not rubygems.is_installed('fpm', version='>= 0.4.37'):
+      log.info('One-time setup: installing fpm from rubygems. Please wait...')
+      rubygems.install_gem('fpm', version='>= 0.4.37')
+
+app.register_module(GenDebRequirements())
 
 
 class GenDebBuilder(base.BaseBuilder):
   """Builder for gendeb rules"""
 
-  fpm_bin = app.get_options().fpm_bin or 'fpm'
 
   def __init__(self, buildroot, target_obj, source_dir):
     base.BaseBuilder.__init__(self, buildroot, target_obj, source_dir)
@@ -33,6 +47,7 @@ class GenDebBuilder(base.BaseBuilder):
     self.deb_filelist = []
     self.controlfiles = []
     self.config_files = []
+    self.fpm_bin = os.path.join(rubygems.gem_bindir(), 'fpm')
 
   def prep(self):
     # Due to possibly-unwise cleverness in __init__.py, pylint thinks
@@ -55,8 +70,8 @@ class GenDebBuilder(base.BaseBuilder):
   def build(self):
     params = self.rule.params
     deb_filename = os.path.basename(self.rule.output_files[0])
-    maintainer = params['packager'] or '<%s@%s>' % (os.getlogin(),
-                                                    socket.gethostname())
+    maintainer = params['packager'] or '<%s@%s>' % (
+        pwd.getpwuid(os.getuid()).pw_name, socket.gethostname())
     fpm_description = [params['short_description']] + params['long_description']
     # The required args:
     cmd = [self.fpm_bin, '-f',

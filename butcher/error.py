@@ -15,13 +15,16 @@ class InvalidRule(ButcherError):
   """That is totally not a valid build rule."""
   pass
 
+
 class BuildFailure(ButcherError):
   """Parent for build failures."""
   pass
 
+
 class AddressError(ButcherError):
   """Can't parse that or something."""
   pass
+
 
 class TargetBuildFailed(BuildFailure):
   """A build failed."""
@@ -33,6 +36,7 @@ class TargetBuildFailed(BuildFailure):
 class OverallBuildFailure(BuildFailure):
   """The overall build failed, most likely because of individual failures."""
   pass
+
 
 class NoSuchTargetError(BuildFailure):
   """That target does not exist."""

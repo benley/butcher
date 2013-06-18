@@ -6,8 +6,8 @@
 # intent is to stop relying on pants at some point and have butcher be
 # self-hosting.
 
-VERSION=0.2.2
-DEB_ITERATION=1
+VERSION=0.2.3
+DEB_ITERATION=3
 
 pants=../../../pants
 
@@ -22,6 +22,18 @@ butcher: butcher.pex
 
 # TODO: after bootstrapping butcher, use it to build its own deb.
 deb: butcher
-	fpm -f -t deb -s dir --prefix /usr -n butcher -v $(VERSION) --iteration $(DEB_ITERATION) --depends git -a native --description "Butcher build system" --deb-user root --deb-group root --url "http://pd.cloudscaling.com/codereview/gitweb?p=butcher.git" bin
+	fpm -f -t deb -s dir \
+		--prefix /usr \
+		-n butcher \
+		-v $(VERSION) \
+		--iteration $(DEB_ITERATION) \
+		--depends git \
+		--depends 'rubygems1.9 | rubygems1.8' \
+		--depends 'ruby1.9.1 | ruby-interpreter' \
+		-a native \
+		--description "Butcher build system" \
+		--deb-user root \
+		--deb-group root \
+		--url "http://pd.cloudscaling.com/codereview/gitweb?p=butcher.git" bin
 
 .PHONY: butcher.pex

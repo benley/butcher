@@ -1,5 +1,5 @@
 # This is a pants BUILD file, not a Butcher one.
-# vi:ft=conf
+# vi:ft=python
 
 python_binary(
     name = 'butcher',
@@ -21,8 +21,17 @@ python_library(
         pants(':cache'),
         pants(':error'),
         pants(':gitrepo'),
+        pants(':rubygems'),
         pants(':util'),
         pants('src/python/cloudscaling/butcher/targets'),
+        pants('src/python/twitter/common/app'),
+        pants('src/python/twitter/common/log'),
+        ])
+
+python_library(
+    name = 'rubygems',
+    sources = ['rubygems.py'],
+    dependencies = [
         pants('src/python/twitter/common/app'),
         pants('src/python/twitter/common/log'),
         ])
