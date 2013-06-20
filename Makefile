@@ -6,10 +6,10 @@
 # intent is to stop relying on pants at some point and have butcher be
 # self-hosting.
 
-VERSION=0.2.4
-DEB_ITERATION=1
+VERSION=0.2.5
+DEB_ITERATION=2
 
-pants=../../../pants
+pants ?= pants
 
 all: deb
 
@@ -28,8 +28,7 @@ deb: butcher
 		-v $(VERSION) \
 		--iteration $(DEB_ITERATION) \
 		--depends git \
-		--depends 'rubygems1.9 | rubygems1.8' \
-		--depends 'ruby1.9.1 | ruby-interpreter' \
+		--depends 'ruby1.9.3' \
 		-a native \
 		--description "Butcher build system" \
 		--deb-user root \

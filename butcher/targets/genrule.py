@@ -74,7 +74,8 @@ class GenRuleBuilder(base.BaseBuilder):
       """Expand $@ or $(@) to one output file."""
       outs = self.rule.params['outs'] or []
       if len(outs) != 1:
-        raise error.InvalidRule(
+        raise error.TargetBuildFailed(
+            self.address,
             '$@ substitution requires exactly one output file, but '
             'this rule has %s of them: %s' % (len(outs), outs))
       else:
@@ -101,16 +102,19 @@ class GenRuleBuilder(base.BaseBuilder):
         # Is it an address found in the deps of this rule?
         addr = self.rule.makeaddress(label)
         if addr not in self.rule.composed_deps():
-          raise error.InvalidRule(
+          raise error.TargetBuildFailed(
+              self.address,
               '%s is referenced in cmd but is neither an output file from '
               'this rule nor a dependency of this rule.' % label)
         else:
           paths = [x for x in self.rulefor(addr).output_files]
           if len(paths) is 0:
-            raise error.InvalidRule(
+            raise error.TargetBuildFailed(
+                self.address,
                 'cmd refers to %s, but it has no output files.')
           elif len(paths) > 1 and tag_location:
-            raise error.InvalidRule(
+            raise error.TargetBuildFailed(
+                  self.address,
                   'Bad substitution in cmd: Expected exactly one file, but '
                   '%s expands to %s files.' % (addr, len(paths)))
           else:
@@ -139,8 +143,10 @@ class GenRuleBuilder(base.BaseBuilder):
         return _expand_onesrc()
 
       else:
-        raise error.InvalidRule('[%s] Unrecognized substitution in cmd: %s' %
-                                (self.address, re_match.group()))
+        raise error.TargetBuildFailed(
+            self.address,
+            '[%s] Unrecognized substitution in cmd: %s' % (
+                self.address, re_match.group()))
 
     cmd, _ = re.subn(FANCY_REGEXES['paren_tag'], _expand_makevar, cmd)
 

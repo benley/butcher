@@ -171,7 +171,7 @@ class Butcher(app.Module):
             log.info('[%s]: Building.', node)
             node_builder.build()
             node_builder.collect_outs()
-        except error.BuildFailure as err:
+        except (error.BuildFailure, error.InvalidRule) as err:
           log.error('[%s]: failed: %s', node, err)
           self.failure_log.append(err)
           break

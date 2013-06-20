@@ -13,12 +13,12 @@ class BrokenGraph(ButcherError):
 
 class InvalidRule(ButcherError):
   """That is totally not a valid build rule."""
-  pass
+  node = None
 
 
 class BuildFailure(ButcherError):
   """Parent for build failures."""
-  pass
+  node = None
 
 
 class AddressError(ButcherError):
