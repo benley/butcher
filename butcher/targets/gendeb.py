@@ -1,5 +1,6 @@
 """gendeb targets"""
 
+import hashlib
 import os
 import pwd
 import re
@@ -16,19 +17,22 @@ from cloudscaling.butcher import util
 from twitter.common import app
 from twitter.common import log
 
-#app.add_option('--fpm_bin', dest='fpm_bin', help='Path to the fpm utility.')
-
 
 class GenDebRequirements(app.Module):
+  """Pre-run requirements to be set up before the build process starts."""
   def __init__(self):
+    # Ensure that the rubygems module is ready for use before running the
+    # setup_function() in this class:
     app.Module.__init__(self, label=__name__,
                         description='gendeb',
                         dependencies='cloudscaling.butcher.rubygems')
 
   def setup_function(self):
+    """twitter.comon.app runs this before any global main() function."""
     if not rubygems.is_installed('fpm', version='>= 0.4.37'):
       log.info('One-time setup: installing fpm from rubygems. Please wait...')
       rubygems.install_gem('fpm', version='>= 0.4.37')
+
 
 app.register_module(GenDebRequirements())
 
@@ -40,7 +44,7 @@ class GenDebBuilder(base.BaseBuilder):
   def __init__(self, buildroot, target_obj, source_dir):
     base.BaseBuilder.__init__(self, buildroot, target_obj, source_dir)
     self.workdir = os.path.join(
-        self.buildroot, self.address.repo, self.address.path, '__GENDEB.%s' %
+        self.buildroot, self.address.repo, self.address.path, '__GENDEB_%s' %
         self.address.target)
     self.deb_fsroot = os.path.join(self.workdir, 'root')
     self.deb_controlroot = os.path.join(self.workdir, 'DEBIAN')
@@ -48,11 +52,9 @@ class GenDebBuilder(base.BaseBuilder):
     self.controlfiles = []
     self.config_files = []
     self.fpm_bin = os.path.join(rubygems.gem_bindir(), 'fpm')
+    self.params = self.rule.params
 
   def prep(self):
-    # Due to possibly-unwise cleverness in __init__.py, pylint thinks
-    # pkgfilegroup and pkg_symlink are classes here, but it is wrong. They are
-    # modules.
     allowed_deps = (pkgfilegroup.PkgFileGroup, pkg_symlink.PkgSymlink)
     for dep in self.rule.composed_deps():
       deprule = self.rule.subgraph.node[dep]['target_obj']
@@ -68,7 +70,7 @@ class GenDebBuilder(base.BaseBuilder):
     base.BaseBuilder.prep(self)
 
   def build(self):
-    params = self.rule.params
+    params = self.params
     deb_filename = os.path.basename(self.rule.output_files[0])
     maintainer = params['packager'] or '<%s@%s>' % (
         pwd.getpwuid(os.getuid()).pw_name, socket.gethostname())
@@ -98,8 +100,7 @@ class GenDebBuilder(base.BaseBuilder):
     if params['homepage']:
       cmd.extend(['--url', params['homepage']])
 
-    def maintainer_script(script):
-      return self.rulefor(params[script]).source_files[0]
+    maintainer_script = lambda x: self.rulefor(params[x].source_files[0])
 
     if params['postinst']:
       cmd.extend(['--after-install', maintainer_script('postinst')])
@@ -133,10 +134,57 @@ class GenDebBuilder(base.BaseBuilder):
     fpm = subprocess.Popen(cmd, stdout=sys.stdout, stderr=sys.stderr,
                            cwd=ruledir)
     fpm.wait()
+    with open(os.path.join(self.buildroot, self.rule.output_files[1]),
+              'w') as changesfile:
+      changesfile.write(self.genchanges())
 
 
   #def collect_srcs(self):
   #  pass
+
+  def genchanges(self):
+    """Generate a .changes file for this package."""
+    chparams = self.params.copy()
+    debpath = os.path.join(self.buildroot, self.rule.output_files[0])
+    chparams.update({
+        'fullversion': '{version}-{release}'.format(**chparams),
+        'metahash': self._metahash().hexdigest(),
+        'deb_sha1': util.hash_file(debpath, hashlib.sha1()).hexdigest(),
+        'deb_sha256': util.hash_file(debpath, hashlib.sha256()).hexdigest(),
+        'deb_md5': util.hash_file(debpath, hashlib.md5()).hexdigest(),
+        'deb_bytes': os.stat(debpath).st_size,
+        # TODO: having to do this split('/')[-1] is absurd:
+        'deb_filename': debpath.split('/')[-1],
+        })
+
+    output = '\n'.join([
+        'Format: 1.8',
+        # Static date string for repeatable builds:
+        'Date: Tue, 01 Jan 2013 00:00:00 -0700',
+        'Source: {package_name}',
+        'Binary: {package_name}',
+        'Architecture: {arch}',
+        'Version: {fullversion}',
+        'Distribution: {distro}',
+        'Urgency: {priority}',
+        'Maintainer: {packager}',
+        'Description: ',
+        ' {package_name} - {short_description}',
+        'Changes: ',
+        ' {package_name} ({fullversion}) {distro}; urgency={priority}',
+        ' .',
+        ' * Built by Butcher - metahash for this build is {metahash}',
+        'Checksums-Sha1: ',
+        ' {deb_sha1} {deb_bytes} {deb_filename}',
+        'Checksums-Sha256: ',
+        ' {deb_sha256} {deb_bytes} {deb_filename}',
+        'Files: ',
+        ' {deb_md5} {deb_bytes} {section} {priority} {deb_filename}',
+        ''  # Newline at end of file.
+        ]).format(**chparams)
+
+    return output
+
 
   def collect_deps(self):
     deb_filelist = []
@@ -176,8 +224,7 @@ class GenDeb(base.BaseTarget):
       ('arch', str, 'amd64'),
       ('conflicts', list, None),
       ('deps', list, None),
-      # Where does this go?
-      #('distro', str, 'unstable'),
+      ('distro', str, 'unstable'),
       ('epoch', (str, int), 0),
       ('extra_control_fields', list, None),
       ('extra_requires', list, None),
@@ -235,6 +282,10 @@ class GenDeb(base.BaseTarget):
 
   @property
   def output_files(self):
-    return [os.path.join(
-        self.address.repo, self.address.path,
-        '%(package_name)s_%(version)s-%(release)s_%(arch)s.deb' % self.params)]
+    return [
+        os.path.join(self.address.repo, self.address.path,
+                     '{package_name}_{version}-{release}_{arch}.deb'.format(
+                         **self.params)),
+        os.path.join(self.address.repo, self.address.path,
+                     '{package_name}_{version}-{release}_{arch}.changes'.format(
+                         **self.params))]

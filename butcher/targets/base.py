@@ -82,6 +82,7 @@ class BaseBuilder(object):
     # the method from the base class in the middle of it. If you get this wrong
     # it could result in butcher not noticing changed inputs between runs,
     # which could cause really nasty problems.
+    # TODO(ben): the above warning seems avoidable with better memoization
 
     if self._cached_metahash:
       return self._cached_metahash

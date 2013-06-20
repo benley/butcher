@@ -6,8 +6,8 @@
 # intent is to stop relying on pants at some point and have butcher be
 # self-hosting.
 
-VERSION=0.2.3
-DEB_ITERATION=3
+VERSION=0.2.4
+DEB_ITERATION=1
 
 pants=../../../pants
 
