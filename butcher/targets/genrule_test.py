@@ -17,7 +17,7 @@ class TestGenrule(unittest.TestCase):
   def test_regexes(self):
     """Verifies that those obnoxious regexes do what they're meant to."""
     rdata = {
-        'paren_tag': [
+        genrule.GenRuleBuilder.paren_tag_re: [
             ('   $(fancystuff inside.blabla)', 'fancystuff inside.blabla'),
             ('asdf$(foobarbas)asdf', 'foobarbas'),
             ('$( location //foo/bar:bla  )', ' location //foo/bar:bla  '),
@@ -25,7 +25,7 @@ class TestGenrule(unittest.TestCase):
             ('$(@)', '@'),
             ('$(SRCS)', 'SRCS'),
             ],
-        'noparen_tag': [
+        genrule.GenRuleBuilder.noparen_tag_re: [
             ('$@', '@'),
             (' $@ ', '@'),
             ('$@Dfoo', '@Dfoo'),
@@ -40,15 +40,13 @@ class TestGenrule(unittest.TestCase):
           expected_output = [outstr]
         else:
           expected_output = []
-        real_re = genrule.FANCY_REGEXES[regex]
-        match = re.findall(real_re, instr)
+        match = re.findall(regex, instr)
         self.assertEqual(
             expected_output, match,
-            'Regex name: %s\n'
-            'Regex: %s\n'
+            '\nRegex: %s\n'
             'Input: %s\n'
             'Expected output: %s\n'
-            'Actual output: %s' % (regex, repr(real_re.pattern), repr(instr),
+            'Actual output: %s' % (repr(regex.pattern), repr(instr),
                                    expected_output, match))
 
 

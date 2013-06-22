@@ -19,6 +19,7 @@ python_library(
         pants('src/python/cloudscaling/butcher:cache'),
         pants('src/python/cloudscaling/butcher:error'),
         pants('src/python/cloudscaling/butcher:gitrepo'),
+        pants('src/python/cloudscaling/butcher:rubygems'),
         pants('src/python/cloudscaling/third_party:networkx'),
         ],
     )

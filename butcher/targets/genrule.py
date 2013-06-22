@@ -10,14 +10,17 @@ from cloudscaling.butcher import error
 from cloudscaling.butcher.targets import base
 from twitter.common import log
 
-FANCY_REGEXES = {
-    'paren_tag': re.compile(r'(?<!\$)\$\((.+?)\)'),
-    'noparen_tag': re.compile(r'(?<!\$)\$([^\$.]+?)(?!\w)'),
-    }
 
 class GenRuleBuilder(base.BaseBuilder):
   """Build a genrule."""
 
+  # regex to match $(tags with parentheses) in cmd sublanguage
+  paren_tag_re = re.compile(r'(?<!\$)\$\((.+?)\)')
+
+  # regex to match $tags_without_parens in cmd sublanguage
+  noparen_tag_re = re.compile(r'(?<!\$)\$([^\$.]+?)(?!\w)')
+
+  # Shell to run cmd subprocesses in:
   shell_bin = '/bin/bash'
 
   def __init__(self, buildroot, target_obj, source_dir):
@@ -148,11 +151,11 @@ class GenRuleBuilder(base.BaseBuilder):
             '[%s] Unrecognized substitution in cmd: %s' % (
                 self.address, re_match.group()))
 
-    cmd, _ = re.subn(FANCY_REGEXES['paren_tag'], _expand_makevar, cmd)
+    cmd, _ = re.subn(self.paren_tag_re, _expand_makevar, cmd)
 
     # Match tags starting with $ without parens. Will also catch parens, so
     # this goes after the tag_re substitutions.
-    cmd, _ = re.subn(FANCY_REGEXES['noparen_tag'], _expand_makevar, cmd)
+    cmd, _ = re.subn(self.noparen_tag_re, _expand_makevar, cmd)
 
     # Now that we're done looking for $(blabla) and $bla parameters, clean up
     # any $$ escaping:
