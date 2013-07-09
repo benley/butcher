@@ -87,7 +87,7 @@ class Butcher(app.Module):
     if explicit_target not in self.graph.nodes():
       raise error.NoSuchTargetError('No rule defined for %s' % explicit_target)
     if not self.options['cache_fetch']:
-      log.info('Cache fetching disabled.')
+      log.info('Cache fetching disabled. Doing a clean build.')
 
     # Get the subgraph of only the things we need built.
     # (yes, topological sort accomplishes that)
@@ -280,6 +280,7 @@ def build(args):
 
   try:
     bb = Butcher()
+    bb.Clean()
     bb.LoadGraph(target)
     bb.Build(target)
   except (gitrepo.GitError,
@@ -301,7 +302,6 @@ def rebuild(args):
     log.fatal('One target required.')
     app.quit(1)
 
-  clean(None)
   app.set_option('disable_cache_fetch', True)
   Butcher.options['cache_fetch'] = False
   build(args)

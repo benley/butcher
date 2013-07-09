@@ -3,3 +3,5 @@
 .*.swp
 bin
 butcher_*.deb
+dist/
+gems/

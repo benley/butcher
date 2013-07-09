@@ -7,8 +7,16 @@ from twitter.common import log
 from cloudscaling.butcher import error
 
 app.add_option(
-    '--gemdir', dest='gem_basedir',
-    help='Path to our gems directory. Defaults to living inside --basedir.')
+    '--gemdir', dest='gem_basedir', default='/var/lib/butcher',
+    help='Path to our gems directory.')
+
+# TODO: Fallback gem_basedir for non-root installs?
+# That is, most of the time butcher will come from a .deb that includes or
+# depends on the requisite gems.  If it isn't, butcher should still be able to
+# download and install what it needs in a user's homedir or elsewhere.
+# Perhaps there should be a system /etc/butcherrc that can set things like
+# gem_basedir in the case of distribution packages, and the default in this
+# file could revert to being inside of the butcher work directory?
 
 
 class RubyGems(app.Module):
@@ -41,7 +49,7 @@ app.register_module(RubyGems())
 def install_gem(gemname, version=None, conservative=True, ri=False, rdoc=False,
                 development=False, format_executable=False, force=False):
   """Install a ruby gem."""
-  cmdline = ['gem', 'install', '--no-ri', '--no-rdoc']
+  cmdline = ['gem', 'install']
   if conservative:
     cmdline.append('--conservative')
   if ri:
