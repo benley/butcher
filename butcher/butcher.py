@@ -346,7 +346,12 @@ def draw(args):
     log.fatal(lolno)
     app.quit(1)
 
-  a = networkx.to_agraph(bb.graph)
+  # Filter down to the target and all of its transitive dependencies.
+  # TODO: make it possible to optionally draw the entire graph
+  filtered_graph = bb.graph.subgraph(
+      networkx.topological_sort(bb.graph, nbunch=[address.new(target)]))
+
+  a = networkx.to_agraph(filtered_graph)
   a.draw(out, prog='dot')
   log.info('Graph written to %s', out)
 
