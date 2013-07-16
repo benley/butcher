@@ -6,8 +6,8 @@
 # intent is to stop relying on pants at some point and have butcher be
 # self-hosting.
 
-VERSION=0.2.6
-DEB_ITERATION=2
+VERSION = 0.2.7
+DEB_ITERATION = UNRELEASED+1
 ARCH ?= amd64
 
 required_fpm_version = 0.4.37

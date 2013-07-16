@@ -72,5 +72,12 @@ python_library(
     name = 'util',
     sources = 'util.py',
     dependencies = [
-        pants('src/python/cloudscaling/third_party:glob2')
+        pants('src/python/cloudscaling/third_party:glob2'),
+        ])
+
+python_binary(
+    name = 'util_test',
+    source = 'util_test.py',
+    dependencies = [
+        pants(':util'),
         ])
