@@ -7,7 +7,7 @@
 # self-hosting.
 
 VERSION = 0.2.7
-DEB_ITERATION = UNRELEASED+1
+DEB_ITERATION = 1
 ARCH ?= amd64
 
 required_fpm_version = 0.4.37
