@@ -39,6 +39,9 @@ app.add_option('--rebuild_all', action='store_true', dest='disable_cache_fetch',
                help='Disable cache fetching and explicitly build each target.')
 app.add_option('--nohardlinks', action='store_true', dest='disable_hardlinks',
                help='Disable hardlinking of files in and out of the cache.')
+app.add_option('--outdir', dest='final_output_dir',
+               help=('Copy the output file(s) of the final target to this '
+                     'directory.'))
 
 
 class Butcher(app.Module):
@@ -183,11 +186,42 @@ class Butcher(app.Module):
       raise error.OverallBuildFailure('Build failed due to previous errors.')
     else:
       log.info('Success.', explicit_target)
-      outputs = self.graph.node[explicit_target]['target_obj'].output_files
-      if outputs:
-        log.info('Outputs:')
+      outputs = list(
+          self.graph.node[explicit_target]['target_obj'].output_files)
+      if not outputs:
+        return
+
+      # The following section is horrible code. Sorry.
+      desired_outdir = app.get_options().final_output_dir
+      finalfiles = []
+
+      if desired_outdir:
+        bases = set([ os.path.dirname(f) for f in outputs ])
+        if len(bases) > 1:
+          strip_prefix = None
+          log.warn(
+              'Output files are in multiple directories. *NOT* flattening.')
+        else:
+          strip_prefix = bases.pop()
+          if not strip_prefix.endswith('/'):
+            strip_prefix = strip_prefix + '/'
+
         for item in outputs:
-          log.info('  %s', os.path.join(self.buildroot, item))
+          builtfile = os.path.join(self.buildroot, item)
+          if strip_prefix:
+            if item.startswith(strip_prefix):
+              item = item[len(strip_prefix):]
+          finalfile = os.path.join(desired_outdir, item)
+          util.linkorcopy(builtfile, finalfile)
+          finalfiles.append(finalfile)
+      else:  # No desired_outdir set.
+        for item in outputs:
+          finalfiles.append(os.path.join(self.buildroot, item))
+
+      if finalfiles:
+        log.info('Outputs:')
+        for item in finalfiles:
+          log.info('  %s', item)
 
   def LoadGraph(self, startingpoint):
     s_tgt = address.new(startingpoint, target='all')
@@ -317,6 +351,10 @@ def clean(args):
 @app.command
 def dump(args):
   """Load the build graph for a target and dump it to stdout."""
+  if len(args) != 1:
+    log.error('One target required.')
+    app.quit(1)
+
   try:
     bb = Butcher()
     bb.LoadGraph(args[0])

@@ -73,6 +73,7 @@ python_library(
     sources = 'util.py',
     dependencies = [
         pants('src/python/cloudscaling/third_party:glob2'),
+        pants('src/python/twitter/common/log'),
         ])
 
 python_binary(

@@ -70,13 +70,11 @@ class PkgFileGroup(base.BaseTarget):
     for dep in self.subgraph.successors(self.address):
       dep_rule = self.subgraph.node[dep]['target_obj']
       for dep_file in dep_rule.output_files:
-        out = self.translate_path(dep_file, dep_rule).lstrip('/')
-        yield out
+        yield self.translate_path(dep_file, dep_rule).lstrip('/')
 
   def composed_deps(self):
     for dep in self.params['srcs']:
-      dep_addr = self.makeaddress(dep)
-      yield dep_addr
+      yield self.makeaddress(dep)
 
   @property
   def source_files(self):

@@ -6,7 +6,7 @@
 # intent is to stop relying on pants at some point and have butcher be
 # self-hosting.
 
-VERSION = 0.2.7
+VERSION = 0.2.8
 DEB_ITERATION = 1
 ARCH ?= amd64
 

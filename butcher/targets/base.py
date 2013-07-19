@@ -157,6 +157,7 @@ class BaseBuilder(object):
       #self.cachemgr.get_obj(item, self._metahash(), dstpath)
 
   def linkorcopy(self, src, dst):
+    """hardlink src file to dst if possible, otherwise copy."""
     if os.path.isdir(dst):
       log.warn('linkorcopy given a directory as destination. Use caution.')
       log.debug('src: %s  dst: %s', src, dst)
