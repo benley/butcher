@@ -21,13 +21,13 @@ python_library(
         pants(':cache'),
         pants(':error'),
         pants(':gitrepo'),
-        pants(':rubygems'),
         pants(':util'),
         pants('src/python/cloudscaling/butcher/targets'),
         pants('src/python/twitter/common/app'),
         pants('src/python/twitter/common/log'),
         ])
 
+# rubygems is currently (temporarily or permanently) unused:
 python_library(
     name = 'rubygems',
     sources = ['rubygems.py'],

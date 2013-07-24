@@ -12,41 +12,40 @@ from cloudscaling.butcher.targets import filegroup
 from cloudscaling.butcher.targets import pkgfilegroup
 from cloudscaling.butcher.targets import pkg_symlink
 from cloudscaling.butcher import error
-from cloudscaling.butcher import rubygems
 from cloudscaling.butcher import util
 from twitter.common import app
 from twitter.common import log
 
 
-class GenDebRequirements(app.Module):
+app.add_option(
+    '--fpm_bin', dest='fpm_bin', default='/var/lib/butcher/bin/fpm',
+    help='Path to the fpm binary.')
+
+
+class GenDebSetup(app.Module):
   """Pre-run requirements to be set up before the build process starts."""
   def __init__(self):
-    # Ensure that the rubygems module is ready for use before running the
-    # setup_function() in this class:
     app.Module.__init__(self, label=__name__,
-                        description='gendeb',
-                        dependencies='cloudscaling.butcher.rubygems')
+                        description='gendeb')
 
   def setup_function(self):
     """twitter.comon.app runs this before any global main() function."""
-    if not (os.path.exists(os.path.join(rubygems.RubyGems().gem_bindir(),
-                                        'fpm'))
-            or rubygems.is_installed('fpm', version='~> 0.4')):
-      log.info('Trying to install fpm from rubygems. Please wait...')
-      try:
-        rubygems.install_gem('fpm', version='~> 0.4')
-      except error.ButcherError as err:
-        log.fatal('Unable to find or install fpm.')
-        log.fatal(err)
-        app.quit(1)
+    fpm_path = app.get_options().fpm_bin
+    if not os.path.exists(fpm_path):
+      log.fatal('Could not find fpm at %s; gendeb cannot function.', fpm_path)
+      app.quit(1)
+    else:
+      GenDebBuilder.fpm_bin = fpm_path
 
 
-app.register_module(GenDebRequirements())
+app.register_module(GenDebSetup())
 
 
 class GenDebBuilder(base.BaseBuilder):
   """Builder for gendeb rules"""
 
+  # Path to the fpm binary.
+  fpm_bin = None
 
   def __init__(self, buildroot, target_obj, source_dir):
     base.BaseBuilder.__init__(self, buildroot, target_obj, source_dir)
@@ -58,7 +57,6 @@ class GenDebBuilder(base.BaseBuilder):
     self.deb_filelist = []
     self.controlfiles = []
     self.config_files = []
-    self.fpm_bin = os.path.join(rubygems.gem_bindir(), 'fpm')
     self.params = self.rule.params
 
   def prep(self):
