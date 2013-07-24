@@ -7,7 +7,7 @@
 # self-hosting.
 
 VERSION = 0.2.9
-DEB_ITERATION = 1
+DEB_ITERATION = 2
 ARCH ?= amd64
 
 pants ?= pants
