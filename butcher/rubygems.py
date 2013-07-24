@@ -9,6 +9,9 @@ from cloudscaling.butcher import error
 app.add_option(
     '--gemdir', dest='gem_basedir', default='/var/lib/butcher',
     help='Path to our gems directory.')
+app.add_option(
+    '--gem_source', dest='gem_source', default='http://rubygems.org',
+    help='Rubygems source repository.')
 
 # TODO: Fallback gem_basedir for non-root installs?
 # That is, most of the time butcher will come from a .deb that includes or
@@ -26,6 +29,7 @@ class RubyGems(app.Module):
                         description='Rubygems wrapper.',
                         dependencies='butcher')
     self.gem_basedir = None
+    self.gem_source = None
 
   def gem_bindir(self):
     return os.path.join(self.gem_basedir, 'bin')
@@ -35,6 +39,7 @@ class RubyGems(app.Module):
       app.set_option('gem_basedir',
                      os.path.join(app.get_options().butcher_basedir, 'gems'))
     self.gem_basedir = app.get_options().gem_basedir
+    self.gem_source = app.get_options().gem_source
     os.environ['GEM_HOME'] = self.gem_basedir
     os.environ['GEM_PATH'] = self.gem_basedir
 
@@ -47,7 +52,8 @@ app.register_module(RubyGems())
 
 
 def install_gem(gemname, version=None, conservative=True, ri=False, rdoc=False,
-                development=False, format_executable=False, force=False):
+                development=False, format_executable=False, force=False,
+                gem_source=None):
   """Install a ruby gem."""
   cmdline = ['gem', 'install']
   if conservative:
@@ -68,6 +74,8 @@ def install_gem(gemname, version=None, conservative=True, ri=False, rdoc=False,
     cmdline.append('--force')
   if version:
     cmdline.extend(['--version', version])
+  cmdline.extend(['--clear-sources',
+                  '--source', gem_source or RubyGems().gem_source])
 
   cmdline.append(gemname)
 
@@ -79,8 +87,8 @@ def install_gem(gemname, version=None, conservative=True, ri=False, rdoc=False,
   try:
     subprocess.check_output(cmdline, shell=False)
   except (OSError, subprocess.CalledProcessError) as err:
-    raise error.ButcherError('Gem install failed. Error was: %s. Output: %s',
-                             err, err.output)
+    raise error.ButcherError(
+        'Gem install failed. Error was: %s. Output: %s' % (err, err.output))
 
 
 def is_installed(gemname, version=None):

@@ -29,9 +29,16 @@ class GenDebRequirements(app.Module):
 
   def setup_function(self):
     """twitter.comon.app runs this before any global main() function."""
-    if not rubygems.is_installed('fpm', version='>= 0.4.37'):
-      log.info('One-time setup: installing fpm from rubygems. Please wait...')
-      rubygems.install_gem('fpm', version='>= 0.4.37')
+    if not (os.path.exists(os.path.join(rubygems.RubyGems().gem_bindir(),
+                                        'fpm'))
+            or rubygems.is_installed('fpm', version='~> 0.4')):
+      log.info('Trying to install fpm from rubygems. Please wait...')
+      try:
+        rubygems.install_gem('fpm', version='~> 0.4')
+      except error.ButcherError as err:
+        log.fatal('Unable to find or install fpm.')
+        log.fatal(err)
+        app.quit(1)
 
 
 app.register_module(GenDebRequirements())
