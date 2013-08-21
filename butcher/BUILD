@@ -1,9 +1,20 @@
 # This is a pants BUILD file, not a Butcher one.
 # vi:ft=python
 
+BUTCHER_VERSION = '0.2.11'
+
 python_binary(
     name = 'butcher',
     source = 'butcher.py',
+    provides = setup_py(
+        name = 'butcher',
+        version = BUTCHER_VERSION,
+        description = 'The Butcher build system',
+        namespace_packages = [
+            'cloudscaling',
+            'cloudscaling.butcher'
+            ]
+        ),
     dependencies = [
         pants(':butcher_lib'),
         ])
