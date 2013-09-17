@@ -7,7 +7,7 @@
 # self-hosting.
 
 VERSION = $(shell tools/python_getvar.py butcher/BUILD BUTCHER_VERSION)
-DEB_ITERATION = UNRELEASED
+DEB_ITERATION = 1
 ARCH ?= amd64
 
 pants ?= ./pants
