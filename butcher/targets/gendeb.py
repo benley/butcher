@@ -88,6 +88,8 @@ class GenDebBuilder(base.BaseBuilder):
            '--name', params['package_name'],
            '--version', params['version'],
            '--iteration', params['release'],
+           '--deb-user', params['files_owner'],
+           '--deb-group', params['files_group'],
            '--description', '\n'.join(fpm_description)]
     # Optional things that have default values:
     cmd.extend([
@@ -105,7 +107,8 @@ class GenDebBuilder(base.BaseBuilder):
     if params['homepage']:
       cmd.extend(['--url', params['homepage']])
 
-    maintainer_script = lambda x: self.rulefor(params[x].source_files[0])
+    maintainer_script = lambda x: self.rulefor(params[x]).source_files.next()
+    # See that next()? source_files is a generator. Otherwise that would be [0].
 
     if params['postinst']:
       cmd.extend(['--after-install', maintainer_script('postinst')])
@@ -171,12 +174,12 @@ class GenDebBuilder(base.BaseBuilder):
         'Architecture: {arch}',
         'Version: {fullversion}',
         'Distribution: {distro}',
-        'Urgency: {priority}',
+        'Urgency: {urgency}',
         'Maintainer: {packager}',
         'Description: ',
         ' {package_name} - {short_description}',
         'Changes: ',
-        ' {package_name} ({fullversion}) {distro}; urgency={priority}',
+        ' {package_name} ({fullversion}) {distro}; urgency={urgency}',
         ' .',
         ' * Built by Butcher - metahash for this build is {metahash}',
         'Checksums-Sha1: ',
@@ -204,7 +207,7 @@ class GenDebBuilder(base.BaseBuilder):
         if rule.address not in self.rule.control_deps:
           deb_filelist.append(item_base)
           if 'section' in rule.params and rule.params['section'] == 'config':
-            self.config_files.append(item_base)
+            self.config_files.append('/%s' % item_base)
           dst = self.deb_fsroot
           self.linkorcopy(
               os.path.join(self.buildroot, item),
@@ -233,6 +236,8 @@ class GenDeb(base.BaseTarget):
       ('epoch', (str, int), 0),
       ('extra_control_fields', list, None),
       ('extra_requires', list, None),
+      ('files_owner', str, 'root'),
+      ('files_group', str, 'root'),
       ('homepage', str, None),
       ('packager', str, None),
       ('package_name', str, None),
@@ -242,6 +247,7 @@ class GenDeb(base.BaseTarget):
       ('preinst', str, None),
       ('prerm', str, None),
       ('section', str, 'misc'),
+      ('urgency', str, 'low'),
       # Not ready for these:
       #('strip', bool, False),
       #('triggers', str, None),

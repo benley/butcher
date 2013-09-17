@@ -10,7 +10,7 @@ VERSION = $(shell tools/python_getvar.py butcher/BUILD BUTCHER_VERSION)
 DEB_ITERATION = UNRELEASED
 ARCH ?= amd64
 
-pants ?= pants
+pants ?= ./pants
 SHELL=/bin/bash
 deb_filename = butcher_$(VERSION)-$(DEB_ITERATION)_$(ARCH).deb
 
