@@ -3,5 +3,7 @@
 .*.swp
 bin/
 butcher_*.deb
+butcher_*.changes
+butcher_*.upload
 dist/
 .bundle
