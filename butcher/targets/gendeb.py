@@ -155,7 +155,7 @@ class GenDebBuilder(base.BaseBuilder):
     chparams = self.params.copy()
     debpath = os.path.join(self.buildroot, self.rule.output_files[0])
     chparams.update({
-        'fullversion': '{version}-{release}'.format(**chparams),
+        'fullversion': '{epoch}:{version}-{release}'.format(**chparams),
         'metahash': self._metahash().hexdigest(),
         'deb_sha1': util.hash_file(debpath, hashlib.sha1()).hexdigest(),
         'deb_sha256': util.hash_file(debpath, hashlib.sha256()).hexdigest(),

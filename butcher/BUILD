@@ -1,7 +1,7 @@
 # This is a pants BUILD file, not a Butcher one.
 # vi:ft=python
 
-BUTCHER_VERSION = '0.2.11'
+BUTCHER_VERSION = '0.2.12'
 
 python_binary(
     name = 'butcher',
