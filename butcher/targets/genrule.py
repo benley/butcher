@@ -117,9 +117,9 @@ class GenRuleBuilder(base.BaseBuilder):
                 'cmd refers to %s, but it has no output files.')
           elif len(paths) > 1 and tag_location:
             raise error.TargetBuildFailed(
-                  self.address,
-                  'Bad substitution in cmd: Expected exactly one file, but '
-                  '%s expands to %s files.' % (addr, len(paths)))
+                self.address,
+                'Bad substitution in cmd: Expected exactly one file, but '
+                '%s expands to %s files.' % (addr, len(paths)))
           else:
             return ' '.join(
                 [os.path.join(self.buildroot, x) for x in paths])
@@ -131,10 +131,8 @@ class GenRuleBuilder(base.BaseBuilder):
 
       # Expand $(SRCS):
       elif re.match(r'SRCS', tagstr):
-        return ' '.join([
-            os.path.join(self.path_to_this_rule, x)
-            for x in self.rule.params['srcs'] or []
-                        ])
+        return ' '.join(os.path.join(self.path_to_this_rule, x)
+                        for x in self.rule.params['srcs'] or [])
 
       # Expand $(@D):
       elif re.match(r'\s*@D\s*', tagstr):
@@ -168,7 +166,6 @@ class GenRuleBuilder(base.BaseBuilder):
     # be useful.
     # http://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html#Automatic-Variables
     self.cmd = cmd
-
 
 
 class GenRule(base.BaseTarget):

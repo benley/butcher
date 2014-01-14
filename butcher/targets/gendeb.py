@@ -64,7 +64,7 @@ class GenDebBuilder(base.BaseBuilder):
     for dep in self.rule.composed_deps():
       deprule = self.rule.subgraph.node[dep]['target_obj']
       if not isinstance(deprule, allowed_deps):
-        if isinstance(deprule, filegroup.FileGroup) and (
+        if (isinstance(deprule, filegroup.FileGroup) and
             deprule.address in self.rule.allowed_filegroup_targets):
           pass
         else:
@@ -192,7 +192,6 @@ class GenDebBuilder(base.BaseBuilder):
         ]).format(**chparams)
 
     return output
-
 
   def collect_deps(self):
     deb_filelist = []

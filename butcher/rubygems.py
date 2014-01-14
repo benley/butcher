@@ -103,8 +103,8 @@ def is_installed(gemname, version=None):
     if err.returncode == 1:
       return False
     else:
-      raise error.ButcherError('Failure running gem. Error was: %s. Output: %s',
-                               err, err.output)
+      raise error.ButcherError(
+          'Failure running gem. Error was: %s. Output: %s', err, err.output)
 
 
 def gem_bindir():

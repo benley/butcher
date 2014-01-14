@@ -1,9 +1,9 @@
 """Unit tests for utility functions."""
 
-import re
 import unittest
 
 from cloudscaling.butcher import util
+
 
 class TestUtils(unittest.TestCase):
 
@@ -25,14 +25,11 @@ class TestUtils(unittest.TestCase):
         ["a", "b", "c", "d", "e"])
 
     self.assertListEqual(
-        list(util.flatten(
-            (["a", "b"], ["c", "d", ("e", "f"), "g"])
-            )),
+        list(util.flatten((["a", "b"], ["c", "d", ("e", "f"), "g"]))),
         ["a", "b", "c", "d", "e", "f", "g"])
 
     self.assertListEqual(
-        list(util.flatten(
-            ["a", ["b", ["c", ["d", ["e", ["f", ["g"]]]]]]])),
+        list(util.flatten(["a", ["b", ["c", ["d", ["e", ["f", ["g"]]]]]]])),
         ["a", "b", "c", "d", "e", "f", "g"])
 
 if __name__ == '__main__':

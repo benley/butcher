@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/env python2.7
 # Copyright 2013 Cloudscaling Inc. All Rights Reserved.
 #
 # This is experimental and incomplete. Don't judge me :-P
@@ -25,31 +25,41 @@ from cloudscaling.butcher import util
 from cloudscaling.butcher.targets import base
 
 app.add_option('--debug', action='store_true', dest='debug')
-app.add_option('--basedir', dest='butcher_basedir',
-               help='Base directory for butcher to work in.',
-               default=os.path.join(util.user_homedir(), '_butcher.data'))
-app.add_option('--build_root', dest='build_root',
-               help=('Base directory in which builds will be done. '
-                     'If unspecified, makes a build directory inside of the '
-                     'butcher basedir.'))
-app.add_option('--buildfile_name', dest='buildfile_name',
-               help='Filename to use as BUILD files in each directory.',
-               default='BUILD')
-app.add_option('--rebuild_all', action='store_true', dest='disable_cache_fetch',
-               help='Disable cache fetching and explicitly build each target.')
-app.add_option('--nohardlinks', action='store_true', dest='disable_hardlinks',
-               help='Disable hardlinking of files in and out of the cache.')
-app.add_option('--outdir', dest='final_output_dir',
-               help=('Copy the output file(s) of the final target to this '
-                     'directory.'))
+app.add_option(
+    '--basedir',
+    dest='butcher_basedir',
+    help='Base directory for butcher to work in.',
+    default=os.path.join(util.user_homedir(), '_butcher.data'))
+app.add_option(
+    '--build_root',
+    dest='build_root',
+    help=('Base directory in which builds will be done. If unspecified, makes '
+          'a build directory inside of the butcher basedir.'))
+app.add_option(
+    '--buildfile_name',
+    dest='buildfile_name',
+    help='Filename to use as BUILD files in each directory.',
+    default='BUILD')
+app.add_option(
+    '--rebuild_all',
+    action='store_true',
+    dest='disable_cache_fetch',
+    help='Disable cache fetching and explicitly build each target.')
+app.add_option(
+    '--nohardlinks',
+    action='store_true',
+    dest='disable_hardlinks',
+    help='Disable hardlinking of files in and out of the cache.')
+app.add_option(
+    '--outdir',
+    dest='final_output_dir',
+    help='Copy the output file(s) of the final target to this directory.')
 
 
 class Butcher(app.Module):
   """Butcher!"""
 
-  options = {
-      'cache_fetch': True,
-      }
+  options = {'cache_fetch': True}
 
   def __init__(self):
     app.Module.__init__(self, label='butcher',
@@ -78,7 +88,7 @@ class Butcher(app.Module):
     if app.get_options().disable_hardlinks:
       base.BaseBuilder.linkfiles = False
 
-  def Clean(self):
+  def clean(self):
     """Clear the contents of the build area."""
     if os.path.exists(self.buildroot):
       log.info('Clearing the build area.')
@@ -86,7 +96,7 @@ class Butcher(app.Module):
       shutil.rmtree(self.buildroot)
       os.makedirs(self.buildroot)
 
-  def Build(self, explicit_target):
+  def build(self, explicit_target):
     if explicit_target not in self.graph.nodes():
       raise error.NoSuchTargetError('No rule defined for %s' % explicit_target)
     if not self.options['cache_fetch']:
@@ -196,7 +206,7 @@ class Butcher(app.Module):
       finalfiles = []
 
       if desired_outdir:
-        bases = set([ os.path.dirname(f) for f in outputs ])
+        bases = set(os.path.dirname(f) for f in outputs)
         if len(bases) > 1:
           strip_prefix = None
           log.warn(
@@ -223,7 +233,7 @@ class Butcher(app.Module):
         for item in finalfiles:
           log.info('  %s', item)
 
-  def LoadGraph(self, startingpoint):
+  def load_graph(self, startingpoint):
     s_tgt = address.new(startingpoint, target='all')
     log.info('Loading graph starting at %s', s_tgt)
     s_subgraph = buildfile.load(self.load_buildfile(s_tgt),
@@ -236,7 +246,7 @@ class Butcher(app.Module):
       log.debug('Unresolved nodes: %s', self.missing_nodes)
       n_tgt = self.paths_wanted.pop()
       if n_tgt in self.paths_loaded:
-        mlist = ', '.join([ str(x) for x in self.missing_nodes ])
+        mlist = ', '.join(str(x) for x in self.missing_nodes)
         raise error.BrokenGraph('Broken graph! Missing targets: %s' % mlist)
       n_subgraph = buildfile.load(self.load_buildfile(n_tgt),
                                   n_tgt.repo, n_tgt.path)
@@ -262,7 +272,7 @@ class Butcher(app.Module):
   @property
   def paths_wanted(self):
     """The set of paths where we expect to find missing nodes."""
-    return set([ address.new(b, target='all') for b in self.missing_nodes ])
+    return set(address.new(b, target='all') for b in self.missing_nodes)
 
   @property
   def missing_nodes(self):
@@ -314,9 +324,9 @@ def build(args):
 
   try:
     bb = Butcher()
-    bb.Clean()
-    bb.LoadGraph(target)
-    bb.Build(target)
+    bb.clean()
+    bb.load_graph(target)
+    bb.build(target)
   except (gitrepo.GitError,
           error.BrokenGraph,
           error.NoSuchTargetError) as err:
@@ -345,7 +355,7 @@ def rebuild(args):
 def clean(args):
   """Akin to make clean"""
   bb = Butcher()
-  bb.Clean()
+  bb.clean()
 
 
 @app.command
@@ -357,7 +367,7 @@ def dump(args):
 
   try:
     bb = Butcher()
-    bb.LoadGraph(args[0])
+    bb.load_graph(args[0])
   except error.BrokenGraph as lolno:
     log.fatal(lolno)
     app.quit(1)
@@ -379,7 +389,7 @@ def draw(args):
 
   try:
     bb = Butcher()
-    bb.LoadGraph(target)
+    bb.load_graph(target)
   except error.BrokenGraph as lolno:
     log.fatal(lolno)
     app.quit(1)

@@ -1,9 +1,7 @@
 """Object caching"""
 
 import os
-import shutil
 from cloudscaling.butcher import gitrepo
-from cloudscaling.butcher import error
 from cloudscaling.butcher import util
 from twitter.common import app
 from twitter.common import log
@@ -91,8 +89,8 @@ class CacheManager(app.Module):
     if os.path.exists(incachepath):
       existingfile_hash = util.hash_file(incachepath).hexdigest()
       if filehash != existingfile_hash:
-        log.warn('File found in mh cache, but checksum differs. Replacing with '
-                 'this new version. (File: %s)', filepath)
+        log.warn('File found in mh cache, but checksum differs. Replacing with'
+                 ' this new version. (File: %s)', filepath)
         log.warn('Possible reasons for this:')
         log.warn(' 1. This build is not hermetic, and something differs about '
                  'the build environment compared to the previous build.')

@@ -79,7 +79,6 @@ class BuildFile(networkx.DiGraph):
     address.CUR_REPO = None
     address.CUR_PATH = ''
 
-
   def get_repo(self):
     return gitrepo.RepoState().GetRepo(self.address.repo)
 
@@ -98,7 +97,7 @@ class BuildFile(networkx.DiGraph):
       if 'target_obj' not in self.node[node] and node not in self.crossrefs:
         raise error.BrokenGraph(
             'Missing target: %s referenced from %s but not defined there.' % (
-            node, self.name))
+                node, self.name))
 
   @property
   def crossrefs(self):

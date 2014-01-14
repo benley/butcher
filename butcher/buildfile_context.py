@@ -18,6 +18,7 @@ import copy
 import os
 from cloudscaling.butcher import error
 
+
 class ContextError(error.ButcherError):
   """Something requiring a BUILD context was attempted out of context."""
   pass

@@ -24,6 +24,7 @@ __all__ = [
     'pkgfilegroup',
     ]
 
+
 def new(ruletype, **kwargs):
   """Instantiate a new build rule based on kwargs.
 

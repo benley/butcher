@@ -59,7 +59,6 @@ class RepoState(app.Module):
     self.repo_basedir = os.path.join(app.get_options().butcher_basedir,
                                      'gitrepo')
 
-
   def GetRepo(self, reponame):
     if reponame not in self.repos:
       origin = None

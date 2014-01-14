@@ -220,7 +220,7 @@ class BaseTarget(object):
         msg = str(param_type.__name__)
       raise error.InvalidRule(
           'While loading %s: Invalid type for %s. Expected: %s. Actual: %s.' % (
-               self.address, param_name, msg, repr(self.params[param_name])))
+              self.address, param_name, msg, repr(self.params[param_name])))
     except KeyError as err:
       log.error(err)
       raise error.InvalidRule(
@@ -286,7 +286,7 @@ class BaseTarget(object):
     """Dependencies of this build target."""
     if 'deps' in self.params:
       param_deps = self.params['deps'] or []
-      deps = [ self.makeaddress(dep) for dep in param_deps ]
+      deps = [self.makeaddress(dep) for dep in param_deps]
       return deps
     else:
       return None
