@@ -1,11 +1,16 @@
 # This is a pants BUILD file, not a Butcher one.
-# vi:ft=python
 
-BUTCHER_VERSION = '0.2.12'
+BUTCHER_VERSION = '0.2.13'
 
 python_binary(
     name = 'butcher',
     source = 'butcher.py',
+    dependencies = [
+        pants(':butcher_lib'),
+        ])
+
+python_library(
+    name = 'butcher_lib',
     provides = setup_py(
         name = 'butcher',
         version = BUTCHER_VERSION,
@@ -15,12 +20,6 @@ python_binary(
             'cloudscaling.butcher'
             ]
         ),
-    dependencies = [
-        pants(':butcher_lib'),
-        ])
-
-python_library(
-    name = 'butcher_lib',
     sources = [
         'buildfile.py',
         'butcher.py',
@@ -33,9 +32,10 @@ python_library(
         pants(':error'),
         pants(':gitrepo'),
         pants(':util'),
-        pants('src/python/cloudscaling/butcher/targets'),
-        pants('src/python/twitter/common/app'),
-        pants('src/python/twitter/common/log'),
+        pants('src/cloudscaling/butcher/targets:targets'),
+        pants('third_party:twitter.common.app'),
+        pants('third_party:twitter.common.log'),
+        pants('third_party:Networkx'),
         ])
 
 # rubygems is currently (temporarily or permanently) unused:
@@ -43,8 +43,8 @@ python_library(
     name = 'rubygems',
     sources = ['rubygems.py'],
     dependencies = [
-        pants('src/python/twitter/common/app'),
-        pants('src/python/twitter/common/log'),
+        pants('third_party:twitter.common.app'),
+        pants('third_party:twitter.common.log'),
         ])
 
 python_library(
@@ -74,22 +74,32 @@ python_library(
     name = 'gitrepo',
     sources = 'gitrepo.py',
     dependencies = [
-        python_requirement('GitPython'),
-        pants('src/python/twitter/common/app'),
-        pants('src/python/twitter/common/log'),
+        pants('third_party:gitpython'),
+        pants('third_party:twitter.common.app'),
+        pants('third_party:twitter.common.log'),
         ])
 
 python_library(
     name = 'util',
     sources = 'util.py',
     dependencies = [
-        pants('src/python/cloudscaling/third_party:glob2'),
-        pants('src/python/twitter/common/log'),
+        pants(':error'),
+        pants('third_party:glob2'),
+        pants('third_party:twitter.common.app'),
+        pants('third_party:twitter.common.log'),
         ])
 
-python_binary(
+python_test_suite(
+    name='tests',
+    dependencies = [
+        pants(':util_test'),
+        pants('src/cloudscaling/butcher/targets:tests'),
+        ])
+
+python_tests(
     name = 'util_test',
-    source = 'util_test.py',
+    sources = ['util_test.py'],
+    coverage = ['cloudscaling.butcher.util'],
     dependencies = [
         pants(':util'),
         ])

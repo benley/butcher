@@ -1,33 +1,28 @@
 # This is hilarious: using make to run pants to build butcher.
 # Gotta bootstrap from somewhere I guess.
 
-# Make sure this directory is at [...]/commons/src/python/cloudscaling before
-# running this, and you'll probably want to make sure pants works first. The
-# intent is to stop relying on pants at some point and have butcher be
-# self-hosting.
+# Make sure pants works before running this.  The intent is to stop relying on
+# pants at some point and have butcher be self-hosting.
 
-VERSION = $(shell tools/python_getvar.py butcher/BUILD BUTCHER_VERSION)
+VERSION = $(shell tools/python_getvar.py src/cloudscaling/butcher/BUILD BUTCHER_VERSION)
 DEB_ITERATION = 1
 ARCH ?= amd64
 
-pants ?= ./pants
+pants ?= pants
 SHELL=/bin/bash
-deb_filename = butcher_$(VERSION)-$(DEB_ITERATION)_$(ARCH).deb
+deb_filename = dist/butcher_$(VERSION)-$(DEB_ITERATION)_$(ARCH).deb
 
 all: deb
 
-butcher.pex:
-	cd ../../../; $(pants) build src/python/cloudscaling/butcher:butcher
-
-butcher: butcher.pex
-	mkdir -p bin
-	cp ../../../dist/butcher.pex bin/butcher
+dist/butcher.pex:
+	$(pants) build src/cloudscaling/butcher:butcher
 
 # TODO: after bootstrapping butcher, use it to build its own deb.
 deb: $(deb_filename)
 
 $(deb_filename): dist
-	dist/var/lib/butcher/bin/fpm \
+	dist/deb/var/lib/butcher/bin/fpm \
+	    -p $(deb_filename) \
 	    -f -t deb -s dir \
 	    --prefix / \
 	    -n butcher \
@@ -41,22 +36,21 @@ $(deb_filename): dist
 	    --deb-user root \
 	    --deb-group root \
 	    --url "http://pd.cloudscaling.com/codereview/gitweb?p=butcher.git" \
-	    -C dist \
+	    -C dist/deb \
 	    usr/ var/
 
 bundle:
-	mkdir -p dist/var/lib/butcher
+	mkdir -p dist/deb/var/lib/butcher
 	bundle package
-	bundle install --local --standalone --path=dist/var/lib/butcher \
-		--binstubs=dist/var/lib/butcher/bin --deployment
-	install -m 0644 Gemfile Gemfile.lock dist/var/lib/butcher
+	bundle install --local --standalone --path=dist/deb/var/lib/butcher \
+		--binstubs=dist/deb/var/lib/butcher/bin --deployment
+	install -m 0644 Gemfile Gemfile.lock dist/deb/var/lib/butcher
 
 clean:
-	-rm -f bin/butcher
 	-rm -rf dist/
 
-dist: butcher bundle
-	mkdir -p dist/{usr/bin,/var/lib/butcher/cache}
-	install -m 0755 bin/butcher dist/usr/bin/butcher
+dist: dist/butcher.pex bundle
+	mkdir -p dist/deb/{usr/bin,/var/lib/butcher/cache}
+	install -m 0755 dist/butcher.pex dist/deb/usr/bin/butcher
 
-.PHONY: butcher.pex clean dist bundle
+.PHONY: clean dist bundle

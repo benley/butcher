@@ -26,7 +26,7 @@ directories (cache, git clients, build area) on the same filesystem.
 * Caching is keyed by metahash, but retrieval is done per-file.
 * The cache does not keep checksums of individual files for verification. It
   should.
-* Cache is local-only, not networked at al.
+* Cache is local-only, not networked at all.
 
 ## Upcoming features
 * Everything
