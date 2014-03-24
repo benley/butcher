@@ -22,13 +22,13 @@ __all__ = ['gendeb', 'genrule', 'filegroup', 'pkgfilegroup', 'pkg_symlink',
 
 
 def globs(*args):
-  """Deprecated: use glob() instead."""
-  # TODO: use the warnings module to issue deprecation warnings.
-  log.warn('globs() is deprecated; please use glob() instead.')
-  return glob(*args)
+    """Deprecated: use glob() instead."""
+    # TODO: use the warnings module to issue deprecation warnings.
+    log.warn('globs() is deprecated; please use glob() instead.')
+    return glob(*args)
 
 
 def rglobs(*args):
-  """Deprecated: use glob() instead."""
-  log.warn('rglobs() is deprecated; please use glob() instead.')
-  return glob(*args)
+    """Deprecated: use glob() instead."""
+    log.warn('rglobs() is deprecated; please use glob() instead.')
+    return glob(*args)
