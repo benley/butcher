@@ -32,9 +32,9 @@ class GenDebSetup(app.Module):
         """twitter.comon.app runs this before any global main() function."""
         fpm_path = app.get_options().fpm_bin
         if not os.path.exists(fpm_path):
-            log.fatal('Could not find fpm at %s; gendeb cannot function.',
-                      fpm_path)
-            app.quit(1)
+            log.warn('Could not find fpm at %s; gendeb cannot function.',
+                     fpm_path)
+            # app.quit(1)
         else:
             GenDebBuilder.fpm_bin = fpm_path
 

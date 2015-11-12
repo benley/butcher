@@ -2,8 +2,9 @@
 # Copyright 2013 Cloudscaling Inc.
 #
 # This is experimental and incomplete. Don't judge me :-P
-
 """Butcher: a distributed build system."""
+
+from __future__ import print_function
 
 __author__ = 'Benjamin Staffin <benley@gmail.com>'
 
@@ -14,8 +15,9 @@ import networkx
 import os
 import pprint
 import shutil
-from twitter.common import log
-from twitter.common import app
+from pyglib import app
+from pyglib import gflags
+from pyglib import log
 from butcher import buildfile
 from butcher import address
 from butcher import cache
@@ -24,47 +26,46 @@ from butcher import gitrepo
 from butcher import util
 from butcher.targets import base
 
-app.add_option('--debug', action='store_true', dest='debug')
-app.add_option(
-    '--basedir',
-    dest='butcher_basedir',
-    help='Base directory for butcher to work in.',
-    default=os.path.join(util.user_homedir(), '_butcher.data'))
-app.add_option(
-    '--build_root',
-    dest='build_root',
-    help=('Base directory in which builds will be done. If unspecified, makes '
-          'a build directory inside of the butcher basedir.'))
-app.add_option(
-    '--buildfile_name',
-    dest='buildfile_name',
-    help='Filename to use as BUILD files in each directory.',
-    default='BUILD')
-app.add_option(
-    '--rebuild_all',
-    action='store_true',
-    dest='disable_cache_fetch',
-    help='Disable cache fetching and explicitly build each target.')
-app.add_option(
-    '--nohardlinks',
-    action='store_true',
-    dest='disable_hardlinks',
-    help='Disable hardlinking of files in and out of the cache.')
-app.add_option(
-    '--outdir',
-    dest='final_output_dir',
-    help='Copy the output file(s) of the final target to this directory.')
+FLAGS = gflags.FLAGS
+
+gflags.DEFINE_boolean('debug', False, 'Debug mode')
+
+gflags.DEFINE_string(
+    'basedir',
+    os.path.join(util.user_homedir(), '.cache', 'butcher'),
+    'Base directory for butcher to work in.')
+
+gflags.DEFINE_string(
+    'buildfile_name',
+    'BUILD',
+    'Filename to use as BUILD files in each directory.')
+
+gflags.DEFINE_boolean(
+    'cache',
+    True,
+    'Use build caching mechanism.')
+
+gflags.DEFINE_boolean(
+    'hardlinks',
+    True,
+    'Try to use hardlinks for cached files.')
+
+gflags.DEFINE_string(
+    'outdir',
+    None,
+    'Copy the output file(s) of the final target to this directory.')
 
 
-class Butcher(app.Module):
+class Butcher(object):
     """Butcher!"""
 
     options = {'cache_fetch': True}
 
-    def __init__(self):
-        app.Module.__init__(self, label='butcher',
-                            description='Butcher build system.',
-                            dependencies='twitter.common.log')
+    def __init__(self,
+                 basedir,
+                 cache_fetch=True,
+                 use_hardlinks=True):
+
         self.repo_state = gitrepo.RepoState()
         self.graph = networkx.DiGraph()
         # TODO: there is no good reason to keep all the separate subgraphs.
@@ -72,20 +73,14 @@ class Butcher(app.Module):
         self.failure_log = []  # Build failure exceptions get kept in here.
         self.buildroot = None
 
-    def setup_function(self):
-        """Runs prior to the global main function."""
-        log.options.LogOptions.set_stderr_log_level('google:INFO')
-        if app.get_options().debug:
-            log.options.LogOptions.set_stderr_log_level('google:DEBUG')
-        if not app.get_options().build_root:
-            app.set_option('build_root', os.path.join(
-                app.get_options().butcher_basedir, 'build'))
-        self.buildroot = app.get_options().build_root
+        self.buildroot = os.path.join(basedir, 'build')
+
         if not os.path.exists(self.buildroot):
             os.makedirs(self.buildroot)
-        if app.get_options().disable_cache_fetch:
-            self.options['cache_fetch'] = False
-        if app.get_options().disable_hardlinks:
+
+        self.options['cache_fetch'] = cache_fetch
+
+        if not use_hardlinks:
             base.BaseBuilder.linkfiles = False
 
     def clean(self):
@@ -209,7 +204,7 @@ class Butcher(app.Module):
                 return
 
             # The following section is horrible code. Sorry.
-            desired_outdir = app.get_options().final_output_dir
+            desired_outdir = FLAGS.outdir
             finalfiles = []
 
             if desired_outdir:
@@ -295,7 +290,7 @@ class Butcher(app.Module):
     def load_buildfile(self, target):
         """Pull a build file from git."""
         log.info('Loading: %s', target)
-        filepath = os.path.join(target.path, app.get_options().buildfile_name)
+        filepath = os.path.join(target.path, FLAGS.buildfile_name)
         try:
             repo = self.repo_state.GetRepo(target.repo)
             return repo.get_file(filepath)
@@ -303,7 +298,8 @@ class Butcher(app.Module):
             log.error('Failed loading %s: %s', target, err)
             raise error.BrokenGraph('Sadface.')
 
-    def already_built(self, target):
+    @staticmethod
+    def already_built(target):
         """Stub. Always returns False."""
         # FIXME: implement or obviate.
         # This may end up in a cache server interface class.
@@ -311,16 +307,14 @@ class Butcher(app.Module):
         return False
 
 
-@app.command
 def resolve(args):
     """Just print the result of parsing a target string."""
     if not args:
         log.error('Exactly 1 argument is required.')
-        app.quit(1)
+        sys.exit(1)
     print(address.new(args[0]))
 
 
-@app.command
 def build(args):
     """Build a target and its dependencies."""
 
@@ -348,7 +342,6 @@ def build(args):
         app.quit(1)
 
 
-@app.command
 def rebuild(args):
     """Rebuild a target and deps, even if it has been built and cached."""
     if len(args) != 1:
@@ -360,14 +353,12 @@ def rebuild(args):
     build(args)
 
 
-@app.command
 def clean(args):
     """Akin to make clean"""
     bb = Butcher()
     bb.clean()
 
 
-@app.command
 def dump(args):
     """Load the build graph for a target and dump it to stdout."""
     if len(args) != 1:
@@ -380,13 +371,12 @@ def dump(args):
     except error.BrokenGraph as lolno:
         log.fatal(lolno)
         app.quit(1)
-    print "Nodes:"
+    print("Nodes:")
     pprint.pprint(bb.graph.node)
-    print "Edges:"
+    print("Edges:")
     pprint.pprint(bb.graph.edge)
 
 
-@app.command
 def draw(args):
     """Load the build graph for a target and render it to an image."""
     if len(args) != 2:
@@ -413,9 +403,19 @@ def draw(args):
     log.info('Graph written to %s', out)
 
 
+def main(_):
+    print("ADSF")
+
+
+def fake_main():
+    """outer main"""
+    app.run()
+
+#app.register_module(Butcher())
+#app.register_module(gitrepo.RepoState())
+#app.register_module(cache.CacheManager())
+#app.interspersed_args(True)
+
+
 if __name__ == '__main__':
-    app.register_module(Butcher())
-    app.register_module(gitrepo.RepoState())
-    app.register_module(cache.CacheManager())
-    app.interspersed_args(True)
-    app.main()
+    fake_main()

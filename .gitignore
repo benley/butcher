@@ -10,3 +10,9 @@ dist/
 .pants.d
 .pants.run
 .coverage
+AUTHORS
+ChangeLog
+*.egg-info/
+.eggs/
+build/
+.python-version
