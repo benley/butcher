@@ -1,7 +1,7 @@
 """Build rule representation."""
 
 import re
-from cloudscaling.butcher import error
+from butcher import error
 
 # These are manipulated by PythonBuildFile to set context.
 CUR_REPO = None

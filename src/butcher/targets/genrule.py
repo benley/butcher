@@ -5,9 +5,9 @@ import re
 import subprocess
 import sys
 import stat
-from cloudscaling.butcher import address
-from cloudscaling.butcher import error
-from cloudscaling.butcher.targets import base
+from butcher import address
+from butcher import error
+from butcher.targets import base
 from twitter.common import log
 
 

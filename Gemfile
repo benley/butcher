@@ -1,2 +1,2 @@
-source 'http://gems.cloudscaling.com'
+source 'https://rubygems.org'
 gem 'fpm', '~> 0.4'

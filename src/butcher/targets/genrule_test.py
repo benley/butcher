@@ -2,7 +2,7 @@
 import re
 import unittest
 
-from cloudscaling.butcher.targets import genrule
+from butcher.targets import genrule
 #from twitter.common import app
 #from twitter.common import log
 

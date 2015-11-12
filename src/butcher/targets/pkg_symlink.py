@@ -1,6 +1,6 @@
 """pkg_symlink targets."""
 
-from cloudscaling.butcher.targets import base
+from butcher.targets import base
 
 
 class PkgSymlinkBuilder(base.BaseBuilder):

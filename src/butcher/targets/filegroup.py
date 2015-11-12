@@ -1,7 +1,7 @@
 """filegroup targets"""
 
 import os.path
-from cloudscaling.butcher.targets import base
+from butcher.targets import base
 
 
 class FileGroupBuilder(base.BaseBuilder):

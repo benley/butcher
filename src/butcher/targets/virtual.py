@@ -1,7 +1,7 @@
 """Virtual (deps only) targets"""
 
-from cloudscaling.butcher.targets import base
-from cloudscaling.butcher import error
+from butcher.targets import base
+from butcher import error
 from twitter.common import log
 
 

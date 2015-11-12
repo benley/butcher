@@ -15,10 +15,6 @@ python_library(
         name = 'butcher',
         version = BUTCHER_VERSION,
         description = 'The Butcher build system',
-        namespace_packages = [
-            'cloudscaling',
-            'cloudscaling.butcher'
-            ]
         ),
     sources = [
         'buildfile.py',
@@ -32,7 +28,7 @@ python_library(
         pants(':error'),
         pants(':gitrepo'),
         pants(':util'),
-        pants('src/cloudscaling/butcher/targets:targets'),
+        pants('src/butcher/targets:targets'),
         pants('third_party:twitter.common.app'),
         pants('third_party:twitter.common.log'),
         pants('third_party:Networkx'),
@@ -93,13 +89,13 @@ python_test_suite(
     name='tests',
     dependencies = [
         pants(':util_test'),
-        pants('src/cloudscaling/butcher/targets:tests'),
+        pants('src/butcher/targets:tests'),
         ])
 
 python_tests(
     name = 'util_test',
     sources = ['util_test.py'],
-    coverage = ['cloudscaling.butcher.util'],
+    coverage = ['butcher.util'],
     dependencies = [
         pants(':util'),
         ])

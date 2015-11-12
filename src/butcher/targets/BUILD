@@ -14,10 +14,10 @@ python_library(
         'virtual.py',
         ],
     dependencies = [
-        pants('src/cloudscaling/butcher:address'),
-        pants('src/cloudscaling/butcher:cache'),
-        pants('src/cloudscaling/butcher:error'),
-        pants('src/cloudscaling/butcher:gitrepo'),
+        pants('src/butcher:address'),
+        pants('src/butcher:cache'),
+        pants('src/butcher:error'),
+        pants('src/butcher:gitrepo'),
         ],
     )
 
@@ -25,7 +25,7 @@ python_tests(
     name = 'tests',
     sources = globs('*_test.py'),
     coverage = [
-        'cloudscaling.butcher.targets',
+        'butcher.targets',
         ],
     dependencies = [
         pants(':targets'),

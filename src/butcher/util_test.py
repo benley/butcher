@@ -2,7 +2,7 @@
 
 import unittest
 
-from cloudscaling.butcher import util
+from butcher import util
 
 
 class TestUtils(unittest.TestCase):

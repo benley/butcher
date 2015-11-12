@@ -1,8 +1,8 @@
 """Object caching"""
 
 import os
-from cloudscaling.butcher import gitrepo
-from cloudscaling.butcher import util
+from butcher import gitrepo
+from butcher import util
 from twitter.common import app
 from twitter.common import log
 

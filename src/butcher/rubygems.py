@@ -4,7 +4,7 @@ import os
 import subprocess
 from twitter.common import app
 from twitter.common import log
-from cloudscaling.butcher import error
+from butcher import error
 
 app.add_option(
     '--gemdir', dest='gem_basedir', default='/var/lib/butcher',

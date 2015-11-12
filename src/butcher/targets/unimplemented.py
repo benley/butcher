@@ -1,6 +1,6 @@
 """Unimplemented target class."""
 
-from cloudscaling.butcher.targets import base
+from butcher.targets import base
 from twitter.common import log
 
 

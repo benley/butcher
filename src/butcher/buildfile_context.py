@@ -4,7 +4,7 @@ Things available in BUILD context:
   invokable rules:
     - At the time of writing this: genrule, gendeb, filegroup, pkgfilegroup
     - See documentation for each type.
-    - For a list see cloudscaling.butcher.targets.__init__.py
+    - For a list see butcher.targets.__init__.py
   functions:
     - glob: see python help for glob.glob
   variables:
@@ -16,7 +16,7 @@ import collections
 import contextlib
 import copy
 import os
-from cloudscaling.butcher import error
+from butcher import error
 
 
 class ContextError(error.ButcherError):
@@ -31,7 +31,7 @@ class ParseContext(object):
     # These strings get executed inside each buildfile context
     # to initialize it:
     _strs_to_exec = [
-        'from cloudscaling.butcher.target_context import *',
+        'from butcher.target_context import *',
         ]
 
     @staticmethod

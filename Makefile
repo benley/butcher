@@ -4,7 +4,7 @@
 # Make sure pants works before running this.  The intent is to stop relying on
 # pants at some point and have butcher be self-hosting.
 
-VERSION = $(shell tools/python_getvar.py src/cloudscaling/butcher/BUILD BUTCHER_VERSION)
+VERSION = $(shell tools/python_getvar.py src/butcher/BUILD BUTCHER_VERSION)
 DEB_ITERATION = 1
 ARCH ?= amd64
 
@@ -15,7 +15,7 @@ deb_filename = dist/butcher_$(VERSION)-$(DEB_ITERATION)_$(ARCH).deb
 all: deb
 
 dist/butcher.pex:
-	$(pants) build src/cloudscaling/butcher:butcher
+	$(pants) build src/butcher:butcher
 
 # TODO: after bootstrapping butcher, use it to build its own deb.
 deb: $(deb_filename)
@@ -35,7 +35,7 @@ $(deb_filename): dist
 	    --description "Butcher build system" \
 	    --deb-user root \
 	    --deb-group root \
-	    --url "http://pd.cloudscaling.com/codereview/gitweb?p=butcher.git" \
+	    --url "https://github.com/benley/butcher" \
 	    -C dist/deb \
 	    usr/ var/
 

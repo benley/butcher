@@ -13,8 +13,8 @@ Not yet implemented:
 """
 
 import os
-from cloudscaling.butcher import address
-from cloudscaling.butcher.targets import base
+from butcher import address
+from butcher.targets import base
 
 
 class PkgFileGroupBuilder(base.BaseBuilder):

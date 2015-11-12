@@ -18,11 +18,11 @@ import json
 import networkx
 import os
 import StringIO
-from cloudscaling.butcher import address
-from cloudscaling.butcher import buildfile_context
-from cloudscaling.butcher import error
-from cloudscaling.butcher import targets
-from cloudscaling.butcher import gitrepo
+from butcher import address
+from butcher import buildfile_context
+from butcher import error
+from butcher import targets
+from butcher import gitrepo
 from twitter.common import app
 from twitter.common import log
 

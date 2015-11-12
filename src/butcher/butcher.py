@@ -1,11 +1,11 @@
 #!/usr/bin/env python2.7
-# Copyright 2013 Cloudscaling Inc. All Rights Reserved.
+# Copyright 2013 Cloudscaling Inc.
 #
 # This is experimental and incomplete. Don't judge me :-P
 
 """Butcher: a distributed build system."""
 
-__author__ = 'Benjamin Staffin <ben@cloudscaling.com>'
+__author__ = 'Benjamin Staffin <benley@gmail.com>'
 
 # If you want this, it has to happen before importing gitrepo:
 #os.environ.update({'GIT_PYTHON_TRACE': 'full'})
@@ -16,13 +16,13 @@ import pprint
 import shutil
 from twitter.common import log
 from twitter.common import app
-from cloudscaling.butcher import buildfile
-from cloudscaling.butcher import address
-from cloudscaling.butcher import cache
-from cloudscaling.butcher import error
-from cloudscaling.butcher import gitrepo
-from cloudscaling.butcher import util
-from cloudscaling.butcher.targets import base
+from butcher import buildfile
+from butcher import address
+from butcher import cache
+from butcher import error
+from butcher import gitrepo
+from butcher import util
+from butcher.targets import base
 
 app.add_option('--debug', action='store_true', dest='debug')
 app.add_option(

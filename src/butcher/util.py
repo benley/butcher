@@ -5,7 +5,7 @@ import glob2
 import hashlib
 import os
 import shutil
-from cloudscaling.butcher import error
+from butcher import error
 from twitter.common import log
 
 

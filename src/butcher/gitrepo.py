@@ -1,4 +1,4 @@
-# Copyright 2013 Cloudscaling Inc. All Rights Reserved.
+# Copyright 2013 Cloudscaling Inc.
 
 """Git repository wrapper module."""
 
@@ -10,11 +10,11 @@ import gitdb
 import os
 from twitter.common import app
 from twitter.common import log
-from cloudscaling.butcher import address
+from butcher import address
 
 app.add_option('--repo_baseurl', dest='repo_baseurl',
                help='Base URL to git repo collection.',
-               default='ssh://pd.cloudscaling.com:29418')
+               default='https://github.com')
 app.add_option(
     '--pin', action='append', dest='pinned_repos',
     help='Pin a repo to a particular symbolic ref. Syntax: //reponame[ref]')

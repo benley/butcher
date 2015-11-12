@@ -1,13 +1,13 @@
 """Target rule types."""
 
 from twitter.common import log
-from cloudscaling.butcher import error
-from cloudscaling.butcher.targets import gendeb
-from cloudscaling.butcher.targets import genrule
-from cloudscaling.butcher.targets import filegroup
-from cloudscaling.butcher.targets import pkgfilegroup
-from cloudscaling.butcher.targets import pkg_symlink
-from cloudscaling.butcher.targets import virtual
+from butcher import error
+from butcher.targets import gendeb
+from butcher.targets import genrule
+from butcher.targets import filegroup
+from butcher.targets import pkgfilegroup
+from butcher.targets import pkg_symlink
+from butcher.targets import virtual
 
 TYPE_MAP = {
     'genrule': genrule.GenRule,

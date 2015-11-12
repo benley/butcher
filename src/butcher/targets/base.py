@@ -3,10 +3,10 @@
 import os
 import re
 import shutil
-from cloudscaling.butcher import address
-from cloudscaling.butcher import cache
-from cloudscaling.butcher import error
-from cloudscaling.butcher import util
+from butcher import address
+from butcher import cache
+from butcher import error
+from butcher import util
 from twitter.common import log
 
 

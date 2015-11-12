@@ -7,12 +7,12 @@ import re
 import socket
 import subprocess
 import sys
-from cloudscaling.butcher.targets import base
-from cloudscaling.butcher.targets import filegroup
-from cloudscaling.butcher.targets import pkgfilegroup
-from cloudscaling.butcher.targets import pkg_symlink
-from cloudscaling.butcher import error
-from cloudscaling.butcher import util
+from butcher.targets import base
+from butcher.targets import filegroup
+from butcher.targets import pkgfilegroup
+from butcher.targets import pkg_symlink
+from butcher import error
+from butcher import util
 from twitter.common import app
 from twitter.common import log
 

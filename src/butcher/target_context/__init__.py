@@ -7,15 +7,15 @@ from twitter.common import log
 # sublanguage parser. This is an unusual case.
 
 # Butcher targets:
-from cloudscaling.butcher.targets.gendeb import GenDeb as gendeb
-from cloudscaling.butcher.targets.genrule import GenRule as genrule
-from cloudscaling.butcher.targets.filegroup import FileGroup as filegroup
-from cloudscaling.butcher.targets.pkgfilegroup import PkgFileGroup as pkgfilegroup
-from cloudscaling.butcher.targets.pkg_symlink import PkgSymlink as pkg_symlink
-#from cloudscaling.butcher.targets.virtual import VirtualTarget as virtual
+from butcher.targets.gendeb import GenDeb as gendeb
+from butcher.targets.genrule import GenRule as genrule
+from butcher.targets.filegroup import FileGroup as filegroup
+from butcher.targets.pkgfilegroup import PkgFileGroup as pkgfilegroup
+from butcher.targets.pkg_symlink import PkgSymlink as pkg_symlink
+#from butcher.targets.virtual import VirtualTarget as virtual
 
 # Other useful things to have in there:
-from cloudscaling.butcher.util import glob
+from butcher.util import glob
 
 __all__ = ['gendeb', 'genrule', 'filegroup', 'pkgfilegroup', 'pkg_symlink',
            'glob', 'globs', 'rglobs']
