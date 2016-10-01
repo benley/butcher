@@ -5,8 +5,8 @@ import glob2
 import hashlib
 import os
 import shutil
+from pyglib import log
 from butcher import error
-from twitter.common import log
 
 
 def user_homedir(username=None):
@@ -119,4 +119,4 @@ def linkorcopy(src, dst):
         log.debug('Hardlinked: %s -> %s', src, dst)
     except OSError:
         shutil.copy2(src, dst)
-        log.debug('Couldn\'t hardlink. Copied: %s -> %s', src, dst)
+        log.debug("Couldn't hardlink. Copied: %s -> %s", src, dst)

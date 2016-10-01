@@ -5,10 +5,9 @@ import re
 import subprocess
 import sys
 import stat
-from butcher import address
+from pyglib import log
 from butcher import error
 from butcher.targets import base
-from twitter.common import log
 
 
 class GenRuleBuilder(base.BaseBuilder):

@@ -9,12 +9,13 @@ from __future__ import print_function
 __author__ = 'Benjamin Staffin <benley@gmail.com>'
 
 # If you want this, it has to happen before importing gitrepo:
-#os.environ.update({'GIT_PYTHON_TRACE': 'full'})
+# os.environ.update({'GIT_PYTHON_TRACE': 'full'})
 
 import networkx
 import os
 import pprint
 import shutil
+import sys
 from pyglib import app
 from pyglib import gflags
 from pyglib import log
@@ -30,30 +31,18 @@ FLAGS = gflags.FLAGS
 
 gflags.DEFINE_boolean('debug', False, 'Debug mode')
 
-gflags.DEFINE_string(
-    'basedir',
-    os.path.join(util.user_homedir(), '.cache', 'butcher'),
-    'Base directory for butcher to work in.')
+gflags.DEFINE_string('basedir',
+                     os.path.join(util.user_homedir(), '.cache', 'butcher'),
+                     'Base directory for butcher to work in.')
 
-gflags.DEFINE_string(
-    'buildfile_name',
-    'BUILD',
-    'Filename to use as BUILD files in each directory.')
+gflags.DEFINE_string('buildfile_name', 'BUILD',
+                     'Filename to use as BUILD files in each directory.')
 
-gflags.DEFINE_boolean(
-    'cache',
-    True,
-    'Use build caching mechanism.')
+gflags.DEFINE_boolean('cache', True, 'Use build caching mechanism.')
 
-gflags.DEFINE_boolean(
-    'hardlinks',
-    True,
-    'Try to use hardlinks for cached files.')
+gflags.DEFINE_boolean('hardlinks', True, 'Use hardlinks for cached files.')
 
-gflags.DEFINE_string(
-    'outdir',
-    None,
-    'Copy the output file(s) of the final target to this directory.')
+gflags.DEFINE_string('outdir', None, 'Copy output file(s) to this directory.')
 
 
 class Butcher(object):
@@ -102,11 +91,11 @@ class Butcher(object):
         # (yes, topological sort accomplishes that)
         buildgraph = self.graph.subgraph(
             networkx.topological_sort(self.graph, nbunch=[explicit_target]))
-        #if app.get_options().debug:
-        #    log.debug('Buildgraph edges:\n%s',
-        #              pprint.pformat(buildgraph.edges()))
-        #    log.debug('Buildgraph nodes:\n%s',
-        #              pprint.pformat(buildgraph.node))
+        # if app.get_options().debug:
+        #     log.debug('Buildgraph edges:\n%s',
+        #               pprint.pformat(buildgraph.edges()))
+        #     log.debug('Buildgraph nodes:\n%s',
+        #               pprint.pformat(buildgraph.node))
 
         # TODO: this should be parallelized.
 
@@ -144,21 +133,21 @@ class Butcher(object):
 
         # Iterate from the top of the tree, pruning based on
         # cached/built status.
-        #buildlist = networkx.topological_sort(buildgraph)
-        #for node in buildlist:
-        #  if node != explicit_target and not buildgraph.predecessors(node):
-        #    # It's an orphaned node and we don't need it.
-        #    buildgraph.remove_node(node)
-        #    continue
-        #  if self.already_built(node):
-        #    # It's already built (or cached)
-        #    buildgraph.remove_node(node)
-        #    if node == explicit_target:
-        #      # The explicitly requested target has already been built.
-        #      # Groovy.
-        #      node_rule.get_from_cache()
-        #      buildlist = []
-        #      break
+        # buildlist = networkx.topological_sort(buildgraph)
+        # for node in buildlist:
+        #   if node != explicit_target and not buildgraph.predecessors(node):
+        #     # It's an orphaned node and we don't need it.
+        #     buildgraph.remove_node(node)
+        #     continue
+        #   if self.already_built(node):
+        #     # It's already built (or cached)
+        #     buildgraph.remove_node(node)
+        #     if node == explicit_target:
+        #       # The explicitly requested target has already been built.
+        #       # Groovy.
+        #       node_rule.get_from_cache()
+        #       buildlist = []
+        #       break
 
         # Now that we've pruned the tree, start building from the _bottom_.
         buildlist = networkx.topological_sort(buildgraph)
@@ -170,7 +159,7 @@ class Butcher(object):
                     node_builder = node_obj.rulebuilder(
                         self.buildroot, node_obj,
                         # TODO: this is absurd:
-                        self.repo_state.GetRepo(node.repo).repo.tree().abspath)
+                        self.repo_state.get_repo(node.repo).repo.tree().abspath)
                     node_builder.prep()
                     if self.options['cache_fetch']:
                         try:
@@ -292,7 +281,7 @@ class Butcher(object):
         log.info('Loading: %s', target)
         filepath = os.path.join(target.path, FLAGS.buildfile_name)
         try:
-            repo = self.repo_state.GetRepo(target.repo)
+            repo = self.repo_state.get_repo(target.repo)
             return repo.get_file(filepath)
         except gitrepo.GitError as err:
             log.error('Failed loading %s: %s', target, err)
@@ -303,7 +292,7 @@ class Butcher(object):
         """Stub. Always returns False."""
         # FIXME: implement or obviate.
         # This may end up in a cache server interface class.
-        _ = target.repo
+        # _ = target.repo
         return False
 
 
@@ -320,7 +309,7 @@ def build(args):
 
     if len(args) != 1:
         log.error('One target required.')
-        app.quit(1)
+        sys.exit(1)
 
     target = address.new(args[0])
     log.info('Resolved target to: %s', target)
@@ -334,19 +323,19 @@ def build(args):
             error.BrokenGraph,
             error.NoSuchTargetError) as err:
         log.fatal(err)
-        app.quit(1)
+        sys.exit(1)
     except error.OverallBuildFailure as err:
         log.fatal(err)
         log.fatal('Error list:')
         [log.fatal('  [%s]: %s', e.node, e) for e in bb.failure_log]
-        app.quit(1)
+        sys.exit(1)
 
 
 def rebuild(args):
     """Rebuild a target and deps, even if it has been built and cached."""
     if len(args) != 1:
         log.fatal('One target required.')
-        app.quit(1)
+        sys.exit(1)
 
     app.set_option('disable_cache_fetch', True)
     Butcher.options['cache_fetch'] = False
@@ -362,15 +351,15 @@ def clean(args):
 def dump(args):
     """Load the build graph for a target and dump it to stdout."""
     if len(args) != 1:
-        log.error('One target required.')
-        app.quit(1)
+        log.error('Exactly one target required.')
+        sys.exit(1)
 
     try:
-        bb = Butcher()
+        bb = Butcher(basedir=FLAGS.basedir)
         bb.load_graph(args[0])
     except error.BrokenGraph as lolno:
         log.fatal(lolno)
-        app.quit(1)
+        sys.exit(1)
     print("Nodes:")
     pprint.pprint(bb.graph.node)
     print("Edges:")
@@ -381,17 +370,17 @@ def draw(args):
     """Load the build graph for a target and render it to an image."""
     if len(args) != 2:
         log.error('Two arguments required: [build target] [output file]')
-        app.quit(1)
+        sys.exit(1)
 
     target = args[0]
     out = args[1]
 
     try:
-        bb = Butcher()
+        bb = Butcher(basedir=FLAGS.basedir)
         bb.load_graph(target)
     except error.BrokenGraph as lolno:
         log.fatal(lolno)
-        app.quit(1)
+        sys.exit(1)
 
     # Filter down to the target and all of its transitive dependencies.
     # TODO: make it possible to optionally draw the entire graph
@@ -402,20 +391,12 @@ def draw(args):
     a.draw(out, prog='dot')
     log.info('Graph written to %s', out)
 
+def main(args):
+    cmd, args = args[0], args[1:]
 
-def main(_):
-    print("ADSF")
-
-
-def fake_main():
-    """outer main"""
-    app.run()
-
-#app.register_module(Butcher())
-#app.register_module(gitrepo.RepoState())
-#app.register_module(cache.CacheManager())
-#app.interspersed_args(True)
-
+    bb = Butcher(basedir=FLAGS.basedir)
+    if cmd.lower() == 'dump':
+        dump(args)
 
 if __name__ == '__main__':
-    fake_main()
+    app.run()

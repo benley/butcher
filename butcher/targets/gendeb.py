@@ -7,38 +7,21 @@ import re
 import socket
 import subprocess
 import sys
+from pyglib import app
+from pyglib import flags
+from pyglib import log
 from butcher.targets import base
 from butcher.targets import filegroup
 from butcher.targets import pkgfilegroup
 from butcher.targets import pkg_symlink
 from butcher import error
 from butcher import util
-from twitter.common import app
-from twitter.common import log
 
 
-app.add_option(
-    '--fpm_bin', dest='fpm_bin', default='/var/lib/butcher/bin/fpm',
-    help='Path to the fpm binary.')
+flags.DEFINE_string('fpm_bin', '/var/lib/butcher/bin/fpm',
+                    'Path to the fpm binary.')
 
-
-class GenDebSetup(app.Module):
-    """Pre-run requirements to be set up before the build process starts."""
-    def __init__(self):
-        app.Module.__init__(self, label=__name__,
-                            description='gendeb')
-
-    def setup_function(self):
-        """twitter.comon.app runs this before any global main() function."""
-        fpm_path = app.get_options().fpm_bin
-        if not os.path.exists(fpm_path):
-            log.warn('Could not find fpm at %s; gendeb cannot function.',
-                     fpm_path)
-            # app.quit(1)
-        else:
-            GenDebBuilder.fpm_bin = fpm_path
-
-app.register_module(GenDebSetup())
+FLAGS = flags.FLAGS
 
 
 class GenDebBuilder(base.BaseBuilder):
@@ -48,6 +31,7 @@ class GenDebBuilder(base.BaseBuilder):
     fpm_bin = None
 
     def __init__(self, buildroot, target_obj, source_dir):
+        self.fpm_bin = FLAGS.fpm_bin
         base.BaseBuilder.__init__(self, buildroot, target_obj, source_dir)
         self.workdir = os.path.join(
             self.buildroot, self.address.repo, self.address.path,
@@ -151,8 +135,8 @@ class GenDebBuilder(base.BaseBuilder):
                   'w') as changesfile:
             changesfile.write(self.genchanges())
 
-    #def collect_srcs(self):
-    #    pass
+    # def collect_srcs(self):
+    #     pass
 
     def genchanges(self):
         """Generate a .changes file for this package."""
@@ -255,8 +239,8 @@ class GenDeb(base.BaseTarget):
         ('section', str, 'misc'),
         ('urgency', str, 'low'),
         # Not ready for these:
-        #('strip', bool, False),
-        #('triggers', str, None),
+        # ('strip', bool, False),
+        # ('triggers', str, None),
         ]
 
     def __init__(self, **kwargs):

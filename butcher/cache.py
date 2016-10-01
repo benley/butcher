@@ -1,36 +1,19 @@
 """Object caching"""
 
 import os
-from butcher import gitrepo
+from pyglib import log
 from butcher import util
-from twitter.common import app
-from twitter.common import log
-
-app.add_option('--object_cache_dir', dest='object_cache_dir',
-               help='Path to local object cache directory.')
 
 
 class CacheMiss(RuntimeError):
     pass
 
 
-class CacheManager(app.Module):
-    """Built object cache manager."""
-    cache_dir = None
+class CacheManager(object):
+    """Built-object cache manager."""
 
-    def __init__(self):
-        app.Module.__init__(self, label='butcher.cachemanager',
-                            description='Butcher cache manager')
-        self.obj_cachedir = None
-        self.mh_cachedir = None
-
-    def setup_function(self):
-        if not self.cache_dir:
-            opts = app.get_options()
-            if opts.object_cache_dir:
-                self.cache_dir = opts.object_cache_dir
-            else:
-                self.cache_dir = os.path.join(opts.butcher_basedir, 'cache')
+    def __init__(self, cache_dir):
+        self.cache_dir = cache_dir
         self.obj_cachedir = os.path.join(self.cache_dir, 'obj')
         self.mh_cachedir = os.path.join(self.cache_dir, 'mh')
         for subdir in (self.obj_cachedir, self.mh_cachedir):
@@ -74,7 +57,7 @@ class CacheManager(app.Module):
           metahash: hash object
         """
         def gen_obj_path(filename):
-            filehash = util.hash_file(filepath).hexdigest()
+            filehash = util.hash_file(filename).hexdigest()
             return filehash, os.path.join(self.obj_cachedir, filehash[0:2],
                                           filehash[2:4], filehash)
 
@@ -144,4 +127,3 @@ class CacheManager(app.Module):
             if not os.path.exists(os.path.dirname(dst_path)):
                 os.makedirs(os.path.dirname(dst_path))
             os.link(incachepath, dst_path)
-            #shutil.copy2(incachepath, dst_path)

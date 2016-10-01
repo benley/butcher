@@ -1,6 +1,6 @@
 """Target rule types."""
 
-from twitter.common import log
+from pyglib import log
 from butcher import error
 from butcher.targets import gendeb
 from butcher.targets import genrule
@@ -42,6 +42,6 @@ def new(ruletype, **kwargs):
     except TypeError:
         log.error('BADNESS. ruletype: %s, data: %s', ruletype, kwargs)
         raise
-        #raise error.InvalidRule(
-        #    '%s does not work that way.\nDetails: %s.\nData: %s' % (
-        #        ruletype, err, kwargs))
+        # raise error.InvalidRule(
+        #     '%s does not work that way.\nDetails: %s.\nData: %s' % (
+        #         ruletype, err, kwargs))

@@ -13,7 +13,6 @@ Not yet implemented:
 """
 
 import os
-from butcher import address
 from butcher.targets import base
 
 
@@ -32,7 +31,7 @@ class PkgFileGroupBuilder(base.BaseBuilder):
                 if not os.path.exists(output_dstdir):
                     os.makedirs(output_dstdir)
                 self.linkorcopy(src, output_dst)
-                #TODO: attrs
+                # TODO: attrs
 
 
 class PkgFileGroup(base.BaseTarget):

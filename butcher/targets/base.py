@@ -3,11 +3,11 @@
 import os
 import re
 import shutil
+from pyglib import log
 from butcher import address
 from butcher import cache
 from butcher import error
 from butcher import util
-from twitter.common import log
 
 
 class BaseBuilder(object):

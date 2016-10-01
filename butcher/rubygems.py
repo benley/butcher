@@ -2,16 +2,15 @@
 
 import os
 import subprocess
-from twitter.common import app
-from twitter.common import log
+from pyglib import app
+from pyglib import flags
+from pyglib import log
 from butcher import error
 
-app.add_option(
-    '--gemdir', dest='gem_basedir', default='/var/lib/butcher',
-    help='Path to our gems directory.')
-app.add_option(
-    '--gem_source', dest='gem_source', default='http://rubygems.org',
-    help='Rubygems source repository.')
+flags.DEFINE_string('gem_basedir', '/var/lib/butcher',
+                    'Path to our gems directory.')
+flags.DEFINE_string('gem_source', 'https://rubygems.org',
+                    'Rubygems source repository.')
 
 # TODO: Fallback gem_basedir for non-root installs?
 # That is, most of the time butcher will come from a .deb that includes or

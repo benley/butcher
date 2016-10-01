@@ -3,28 +3,33 @@
 """Git repository wrapper module."""
 
 # If you want this, it has to happen before importing git, as silly as that is:
-#os.environ.update({'GIT_PYTHON_TRACE': 'full'})
+# os.environ.update({'GIT_PYTHON_TRACE': 'full'})
 
 import git
 import gitdb
 import os
-from twitter.common import app
-from twitter.common import log
+from pyglib import flags
+from pyglib import log
 from butcher import address
 
-app.add_option('--repo_baseurl', dest='repo_baseurl',
-               help='Base URL to git repo collection.',
-               default='https://github.com')
-app.add_option(
-    '--pin', action='append', dest='pinned_repos',
-    help='Pin a repo to a particular symbolic ref. Syntax: //reponame[ref]')
-app.add_option(
-    '--map_repo', action='append', dest='repo_overrides',
-    help=('Override the upstream location of a repo. '
-          'Format: <reponame>:</path/to/repo>'))
-app.add_option(
-    '--default_ref', dest='default_ref', default='develop',
-    help='Default git symbolic ref to checkout if not pinned otherwise.')
+FLAGS = flags.FLAGS
+
+flags.DEFINE_string('repo_baseurl', 'Base URL to git repo collection.',
+                    'https://github.com')
+
+flags.DEFINE_multistring(
+    'pin', None,
+    'Pin a repo to a particular symbolic ref. '
+    'Syntax: //reponame[ref]')
+
+flags.DEFINE_multistring(
+    'map_repo', None,
+    'Override the upstream location of a repo. '
+    'Syntax: <reponame>:</path/to/repo>')
+
+flags.DEFINE_string(
+    'default_ref', 'master',
+    'Default git symbolic ref to checkout if not pinned otherwise.')
 
 # TODO: validate repo_overrides before starting any real work.
 # TODO: a way to override the working copy location?
@@ -36,68 +41,58 @@ class GitError(RuntimeError):
     pass
 
 
-class RepoState(app.Module):
-    """Holds git repo state. Singleton thanks to app.Module."""
+class RepoState(object):
     repos = {}
     pins = {}
     origin_overrides = {}
     repo_basedir = ''
+    __init_done = False
 
-    def __init__(self):
-        app.Module.__init__(self, label=__name__,
-                            description='Git repo subsystem.')
-
-    def setup_function(self):
-        overrides = app.get_options().repo_overrides
-        if overrides:
-            for line in overrides:
-                (reponame, path) = line.split(':')
-                self.origin_overrides[reponame] = os.path.abspath(
-                    os.path.expanduser(path))
-        pins = app.get_options().pinned_repos
-        for pin in (pins or []):
+    @classmethod
+    def _init(cls):
+        if cls.__init_done:
+            return
+        for override in FLAGS.map_repo or []:
+            (reponame, path) = override.split(':')
+            cls.origin_overrides[reponame] = os.path.abspath(
+                os.path.expanduser(path))
+        for pin in FLAGS.pin or []:
             ppin = address.new(pin)
-            self.pins[ppin.repo] = ppin.git_ref
-        self.repo_basedir = os.path.join(app.get_options().butcher_basedir,
-                                         'gitrepo')
+            cls.pins[ppin.repo] = ppin.git_ref
+        cls.repo_basedir = os.path.join(FLAGS.basedir, 'gitrepo')
+        cls.__init_done = True
 
-    def GetRepo(self, reponame):
-        if reponame not in self.repos:
-            origin = None
-            if reponame in self.origin_overrides:
-                origin = self.origin_overrides[reponame]
-            ref = None
-            if reponame in self.pins:
-                ref = self.pins[reponame]
-            self.repos[reponame] = GitRepo(reponame, ref, origin=origin)
-        return self.repos[reponame]
+    @classmethod
+    def get_repo(cls, reponame):
+        if not cls.__init_done:
+            cls._init()
 
-    def HeadList(self):
-        """Return a list of all the currently loaded repo HEAD objects."""
-        return [(rname, repo.currenthead) for rname, repo in self.repos.items()
-                ]
+        if reponame not in cls.repos:
+            origin = cls.origin_overrides.get(reponame)
+            ref = cls.pins.get(reponame)
+            cls.repos[reponame] = GitRepo(reponame, ref, origin)
+
+    @classmethod
+    @property
+    def heads(cls):
+        """A list of all the currently-loaded repo HEAD objects."""
+        return [
+            (rname, repo.currenthead) for rname, repo in cls.repos.items()]
 
 
 class GitRepo(object):
     """Git repository wrapper."""
 
-    def __init__(self, name, ref=None, origin=None):
-        opts = app.get_options()
-        self.repo_baseurl = opts.repo_baseurl
-        #log.debug('Base url: %s', self.repo_baseurl)
-
-        self.repo_basedir = RepoState().repo_basedir
-        #log.debug('Base directory: %s', self.repo_basedir)
-
+    def __init__(self, name, ref=None, origin=None, repo_baseurl=None):
+        self.repo_baseurl = repo_baseurl or FLAGS.repo_baseurl
+        # log.debug('Base url: %s', self.repo_baseurl)
+        self.repo_basedir = RepoState.repo_basedir
+        # log.debug('Base directory: %s', self.repo_basedir)
         self.name = name
-        #log.debug('Repo name: %s', self.name)
+        # log.debug('Repo name: %s', self.name)
+        self.ref = ref or FLAGS.default_ref
 
-        self.ref = ref or opts.default_ref
-
-        if origin:
-            self.origin_url = origin
-        else:
-            self.origin_url = '%s/%s' % (self.repo_baseurl, self.name)
+        self.origin_url = origin or '%s/%s' % (self.repo_baseurl, self.name)
         log.debug('[%s] Origin url: %s', self.name, self.origin_url)
 
         self.repodir = os.path.join(self.repo_basedir, self.name)

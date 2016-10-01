@@ -1,10 +1,7 @@
 """Unit tests for genrules."""
 import re
 import unittest
-
 from butcher.targets import genrule
-#from twitter.common import app
-#from twitter.common import log
 
 
 class TestGenrule(unittest.TestCase):

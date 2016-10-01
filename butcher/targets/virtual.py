@@ -1,8 +1,8 @@
 """Virtual (deps only) targets"""
 
+from pyglib import log
 from butcher.targets import base
 from butcher import error
-from twitter.common import log
 
 
 class VirtualTargetBuilder(base.BaseBuilder):

@@ -1,7 +1,7 @@
 """Importable context to be used inside BUILD files."""
 
 # Things that don't go into the build context:
-from twitter.common import log
+from pyglib import log
 
 # Breaking my own rule of only importing whole modules in order to set up a
 # sublanguage parser. This is an unusual case.
@@ -12,7 +12,7 @@ from butcher.targets.genrule import GenRule as genrule
 from butcher.targets.filegroup import FileGroup as filegroup
 from butcher.targets.pkgfilegroup import PkgFileGroup as pkgfilegroup
 from butcher.targets.pkg_symlink import PkgSymlink as pkg_symlink
-#from butcher.targets.virtual import VirtualTarget as virtual
+# from butcher.targets.virtual import VirtualTarget as virtual
 
 # Other useful things to have in there:
 from butcher.util import glob

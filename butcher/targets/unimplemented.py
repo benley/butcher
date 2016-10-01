@@ -1,7 +1,7 @@
 """Unimplemented target class."""
 
+from pyglib import log
 from butcher.targets import base
-from twitter.common import log
 
 
 class UnimplementedTarget(base.BaseTarget):

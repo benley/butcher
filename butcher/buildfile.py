@@ -23,8 +23,10 @@ from butcher import buildfile_context
 from butcher import error
 from butcher import targets
 from butcher import gitrepo
-from twitter.common import app
-from twitter.common import log
+from pyglib import gflags
+from pyglib import log
+
+FLAGS = gflags.FLAGS
 
 
 def load(stream, reponame, path):
@@ -58,7 +60,7 @@ class BuildFile(networkx.DiGraph):
         except error.InvalidRule as err:
             raise error.BrokenGraph('%s (in file: %s)' % (
                 err, os.path.join(self.path_on_disk,
-                                  app.get_options().buildfile_name)))
+                                  FLAGS.buildfile_name)))
 
         self.validate_internal_deps()
 
