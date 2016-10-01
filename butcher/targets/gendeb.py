@@ -18,7 +18,7 @@ from twitter.common import log
 
 
 app.add_option(
-    '--fpm_bin', dest='fpm_bin', default='/var/lib/butcher/bin/fpm',
+    '--fpm_bin', dest='fpm_bin', default='fpm',
     help='Path to the fpm binary.')
 
 
@@ -32,9 +32,7 @@ class GenDebSetup(app.Module):
         """twitter.comon.app runs this before any global main() function."""
         fpm_path = app.get_options().fpm_bin
         if not os.path.exists(fpm_path):
-            log.fatal('Could not find fpm at %s; gendeb cannot function.',
-                      fpm_path)
-            app.quit(1)
+            log.warn('Could not find fpm; gendeb cannot function.')
         else:
             GenDebBuilder.fpm_bin = fpm_path
 

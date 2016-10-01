@@ -1,10 +1,11 @@
 GitPython
 glob2
-networkx==1.7rc1
+networkx
 # pygraphviz
 # matplotlib
 # numpy
 dateutils
-pyglib
 twitter.common.app
 twitter.common.log
+# for run_script_module:
+google-apputils

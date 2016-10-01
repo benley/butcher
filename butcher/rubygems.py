@@ -1,4 +1,7 @@
-"""Manage rubygems for our own internal use."""
+"""Manage rubygems for butcher's internal use.
+
+Much like the rest of Butcher, this is fairly gross.
+"""
 
 import os
 import subprocess

@@ -29,7 +29,7 @@ app.add_option(
     '--basedir',
     dest='butcher_basedir',
     help='Base directory for butcher to work in.',
-    default=os.path.join(util.user_homedir(), '_butcher.data'))
+    default=os.path.join(util.user_homedir(), '.cache', 'butcher'))
 app.add_option(
     '--build_root',
     dest='build_root',
@@ -413,13 +413,15 @@ def draw(args):
     log.info('Graph written to %s', out)
 
 
-def proxymain():
-    """setuptools blahblah"""
+def stub_main():
+    """setuptools blah: it still can't run a module as a script entry_point"""
+    from google.apputils import run_script_module
+    import butcher.main
+    run_script_module.RunScriptModule(butcher.main)
+
+if __name__ == '__main__':
     app.register_module(Butcher())
     app.register_module(gitrepo.RepoState())
     app.register_module(cache.CacheManager())
     app.interspersed_args(True)
     app.main()
-
-if __name__ == '__main__':
-    proxymain()

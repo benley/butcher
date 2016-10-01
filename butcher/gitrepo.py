@@ -14,7 +14,7 @@ from butcher import address
 
 app.add_option('--repo_baseurl', dest='repo_baseurl',
                help='Base URL to git repo collection.',
-               default='https://github.com')
+               default='https://github.com/benley')
 app.add_option(
     '--pin', action='append', dest='pinned_repos',
     help='Pin a repo to a particular symbolic ref. Syntax: //reponame[ref]')
@@ -23,7 +23,7 @@ app.add_option(
     help=('Override the upstream location of a repo. '
           'Format: <reponame>:</path/to/repo>'))
 app.add_option(
-    '--default_ref', dest='default_ref', default='develop',
+    '--default_ref', dest='default_ref', default='HEAD',
     help='Default git symbolic ref to checkout if not pinned otherwise.')
 
 # TODO: validate repo_overrides before starting any real work.
