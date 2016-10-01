@@ -2,11 +2,10 @@
 *.pyo
 .*.swp
 bin/
-butcher_*.deb
-butcher_*.changes
-butcher_*.upload
 dist/
 .bundle
-.pants.d
-.pants.run
 .coverage
+build/
+*.egg-info/
+AUTHORS
+ChangeLog

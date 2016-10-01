@@ -1,0 +1,10 @@
+GitPython
+glob2
+networkx==1.7rc1
+# pygraphviz
+# matplotlib
+# numpy
+dateutils
+pyglib
+twitter.common.app
+twitter.common.log

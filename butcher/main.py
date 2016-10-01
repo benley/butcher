@@ -413,9 +413,13 @@ def draw(args):
     log.info('Graph written to %s', out)
 
 
-if __name__ == '__main__':
+def proxymain():
+    """setuptools blahblah"""
     app.register_module(Butcher())
     app.register_module(gitrepo.RepoState())
     app.register_module(cache.CacheManager())
     app.interspersed_args(True)
     app.main()
+
+if __name__ == '__main__':
+    proxymain()
