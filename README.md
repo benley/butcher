@@ -9,7 +9,7 @@ Butcher makes various assumptions that make it impractical to use as-is:
 - Assumes all your git repositories share the same base url
 - Assumes that all the projects you want to build have butcher-style BUILD files in their source repo
 
-I was a relatively inexperienced programmer back then, so Butcher is also rife with design decisions that I would make very differently now, were I to start a project like this again.  Nevertheless, I did learn a lot from this project, and Butcher was very useful as an internal build tool at [Cloudscaling][https://cloudscaling.com/] for our various projects at the time.
+I was a relatively inexperienced programmer back then, so Butcher is also rife with design decisions that I would make very differently now, were I to start a project like this again.  Nevertheless, I did learn a lot from this project, and Butcher was very useful as an internal build tool at [Cloudscaling][8] for our various projects at the time.
 
 Butcher target addresses are very much like Bazel's [target labels][6], with an additional syntax for specifying a git ref in a remote repository:
 
@@ -65,3 +65,4 @@ directories (cache, git clients, build area) on the same filesystem.
 [5]: https://www.bazel.io/versions/master/docs/build-ref.html "Bazel's BUILD files"
 [6]: https://www.bazel.io/versions/master/docs/build-ref.html#labels "Bazel target labels"
 [7]: https://www.bazel.io/versions/master/docs/external.html
+[8]: https://cloudscaling.com/
